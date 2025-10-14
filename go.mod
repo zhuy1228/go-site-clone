@@ -6,6 +6,7 @@ require (
 	github.com/go-rod/rod v0.116.2
 	github.com/go-rod/stealth v0.4.9
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.27
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
