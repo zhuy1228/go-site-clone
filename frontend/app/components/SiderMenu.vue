@@ -12,10 +12,10 @@
             <template #title>
               <span>
                 <user-outlined />
-                <span>设备管理</span>
+                <span>仿站</span>
               </span>
             </template>
-            <a-menu-item key="list">设备列表</a-menu-item>
+            <a-menu-item key="list">整站下载</a-menu-item>
           </a-sub-menu>
         </a-menu>
       </a-layout-sider>

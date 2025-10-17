@@ -9,7 +9,7 @@ import (
 type Browser struct{}
 
 type BrowserInfo struct {
-	Id      int
+	Id      string
 	Browser *rod.Browser
 	Url     string
 	Page    *rod.Page
@@ -26,13 +26,13 @@ type Fingerprint struct {
 }
 
 var (
-	BrowserPool = make(map[int]*BrowserInfo) // 初始化map
-	poolMutex   sync.RWMutex                 // 添加读写锁保证并发安全
+	BrowserPool = make(map[string]*BrowserInfo) // 初始化map
+	poolMutex   sync.RWMutex                    // 添加读写锁保证并发安全
 )
 
 var ChromeExample Chrome
 
-func (*Browser) GetBrowser(id int, params *Fingerprint) *BrowserInfo {
+func (*Browser) GetBrowser(id string, params *Fingerprint) *BrowserInfo {
 	poolMutex.RLock()
 	value, ok := BrowserPool[id]
 	poolMutex.RUnlock()
@@ -63,7 +63,7 @@ func (*Browser) GetBrowser(id int, params *Fingerprint) *BrowserInfo {
 	return browserInfo
 }
 
-func (*Browser) GetAllBrowser() map[int]*BrowserInfo {
+func (*Browser) GetAllBrowser() map[string]*BrowserInfo {
 	return BrowserPool
 }
 
@@ -73,7 +73,7 @@ func (*Browser) CancelAllBrowser() {
 	}
 }
 
-func (*Browser) CancelBrowser(id int) {
+func (*Browser) CancelBrowser(id string) {
 	browserInfo := BrowserPool[id]
 	if browserInfo == nil {
 		return

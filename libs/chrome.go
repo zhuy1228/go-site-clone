@@ -3,7 +3,6 @@ package libs
 import (
 	"log"
 	"path/filepath"
-	"strconv"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
@@ -13,9 +12,8 @@ import (
 
 type Chrome struct{}
 
-func (c *Chrome) Create(accountId int, params *Fingerprint) (*rod.Browser, string, *rod.Page) {
-	var accountIdStr = strconv.Itoa(accountId)
-	userDataDir := "user-data/" + accountIdStr
+func (c *Chrome) Create(accountId string, params *Fingerprint) (*rod.Browser, string, *rod.Page) {
+	userDataDir := "user-data/" + accountId
 	absPath, _ := filepath.Abs(userDataDir)
 	log.Printf("用户数据目录: %s", absPath)
 	path, _ := launcher.LookPath() // 获取当前系统的浏览器目录
