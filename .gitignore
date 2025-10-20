@@ -4,3 +4,23 @@ frontend/dist
 frontend/node_modules
 build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+
+.DS_Store
+node_modules/
+/dist/
+/user-data/
+/log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/www
+config.yaml
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.vs/*

@@ -8,14 +8,15 @@
             <pie-chart-outlined />
             <span>控制台</span>
           </a-menu-item>
-          <a-sub-menu key="device">
+          <a-sub-menu key="site">
             <template #title>
               <span>
                 <user-outlined />
                 <span>仿站</span>
               </span>
             </template>
-            <a-menu-item key="list">整站下载</a-menu-item>
+            <a-menu-item key="download">整站下载</a-menu-item>
+            <a-menu-item key="record">仿站记录</a-menu-item>
           </a-sub-menu>
         </a-menu>
       </a-layout-sider>

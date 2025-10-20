@@ -13,6 +13,7 @@ import (
 
 type SiteService struct {
 	BaseDomain string
+	Port       string
 }
 
 type RequestParams struct {
@@ -36,9 +37,10 @@ func (s SiteService) GetAllResources(rawURL string) ([]RequestParams, []string) 
 	host := parsed.Hostname()
 	if parsed.Port() != "" {
 		host += parsed.Port()
+		s.Port = parsed.Port()
 	}
 	obj := Browser.GetBrowser(host, &libs.Fingerprint{})
-	s.BaseDomain = host
+	s.BaseDomain = parsed.Hostname()
 	ActiveHref["https://"+host] = struct{}{}
 	// 进入主站
 	// browser := obj.Browser
@@ -171,5 +173,27 @@ func deduplicationRequest(list []RequestParams) []RequestParams {
 			newList = append(newList, v)
 		}
 	}
+
+	return newList
+}
+
+func (s SiteService) DeduplicationRequestByUrl(list []RequestParams) []RequestParams {
+	var newList []RequestParams
+	for _, v := range list {
+		is := true
+		u, _ := url.Parse(v.URL)
+		u.RawQuery = ""
+		for _, l := range newList {
+			ur, _ := url.Parse(l.URL)
+			ur.RawQuery = ""
+			if u.String() == ur.String() && l.Type == v.Type {
+				is = false
+			}
+		}
+		if is {
+			newList = append(newList, v)
+		}
+	}
+
 	return newList
 }
