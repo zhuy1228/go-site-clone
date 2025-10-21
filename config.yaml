@@ -11,3 +11,6 @@ stunUrl: "stun:106.12.33.188:3478"
 
 # api地址
 apiUrl: "http://106.12.33.188:6996"
+
+# 网页文件保存目录
+siteFileDir: "www"

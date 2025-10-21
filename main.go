@@ -27,10 +27,12 @@ func main() {
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
+	appService := &App{}
 	app := application.New(application.Options{
 		Name:        "wails3-nuxt",
 		Description: "A demo of using raw HTML & CSS",
 		Services: []application.Service{
+			application.NewService(appService),
 			application.NewService(&GreetService{}),
 		},
 		Assets: application.AssetOptions{
@@ -55,8 +57,10 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
+		Width:            1240,
+		Height:           850,
 	})
-
+	appService.app = app
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.
 	go func() {

@@ -20,5 +20,5 @@ export default defineNuxtConfig({
   },
   plugins: [
     '~/plugins/ant-design-vue',
-  ],
+  ]
 })

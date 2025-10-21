@@ -1,288 +1,862 @@
 <template>
-  <div>
-    <a-breadcrumb style="margin: 10px 0">
-      <a-breadcrumb-item>仿站</a-breadcrumb-item>
-      <a-breadcrumb-item>整站下载</a-breadcrumb-item>
-    </a-breadcrumb>
-    <div class="google-like-page">
-      <!-- 主要内容区域 -->
-      <div class="main-content">
-        <!-- Logo区域 -->
-        <div class="logo-container" :class="{ 'logo-small': isSearching }">
-          <h1 class="logo">Google</h1>
+  <div class="google-search-page">
+    <!-- 背景装饰元素 -->
+    <div class="background-elements">
+      <div class="floating-circle circle-1"></div>
+      <div class="floating-circle circle-2"></div>
+      <div class="floating-circle circle-3"></div>
+    </div>
+
+    <!-- 主要内容区域 -->
+    <main class="main-content">
+      <!-- 搜索容器 - 带动画效果 -->
+      <div 
+        :class="['search-section', { 'collapsed': hasSearched }]"
+      >
+        <!-- Google Logo -->
+        <div class="logo-section" v-if="!hasSearched">
+          <div class="google-logo">
+            <span class="logo-letter g">G</span>
+            <span class="logo-letter o1">o</span>
+            <span class="logo-letter o2">o</span>
+            <span class="logo-letter g2">g</span>
+            <span class="logo-letter l">l</span>
+            <span class="logo-letter e">e</span>
+          </div>
+          <div class="country-indicator">中国</div>
         </div>
 
-        <!-- 搜索框容器，使用动态类名控制动画 -->
-        <div class="search-container" :class="{ 'search-top': isSearching }" ref="searchContainer">
-          <div class="search-box">
-            <a-input v-model:value="searchQuery" class="search-input" placeholder="输入一个网址或者包含网址的链接，点击回车"
-              @press-enter="handleSearch" ref="searchInput">
-              <template #prefix>
-                <SearchOutlined />
-              </template>
-            </a-input>
-
-            <!-- <div class="search-buttons">
-              <a-button type="primary" @click="handleSearch">Google 搜索</a-button>
-              <a-button @click="handleFeelingLucky">手气不错</a-button>
-            </div> -->
+        <!-- 搜索输入区域 -->
+        <div class="search-input-container">
+          <div class="search-input-wrapper" :class="{ focused: isInputFocused }">
+            <SearchOutlined class="search-icon" />
+            <a-input
+              ref="searchInputRef"
+              v-model:value="searchKeyword"
+              class="enhanced-search-input"
+              placeholder="在 Google 上搜索，或者输入一个网址"
+              size="large"
+              @focus="onInputFocus"
+              @blur="onInputBlur"
+              @press-enter="handleSearch"
+            />
+            <div class="input-right-icons">
+              <span class="voice-icon" @click="handleVoiceSearch">🎤</span>
+              <span class="lens-icon" @click="handleImageSearch">📷</span>
+            </div>
           </div>
         </div>
 
-        <!-- 搜索结果区域 -->
-        <div v-if="showResults" class="search-results">
-          <h2>搜索结果</h2>
-          <p>这是搜索结果区域...</p>
+        <!-- 操作按钮 -->
+        <div class="action-section" v-if="!hasSearched">
+          <a-button 
+            type="primary" 
+            class="search-btn primary-btn"
+            @click="handleSearch"
+            :loading="searchLoading"
+          >
+            <template #icon><SearchOutlined /></template>
+            Google 搜索
+          </a-button>
+          <a-button class="search-btn secondary-btn" @click="handleFeelingLucky">
+            手气不错
+          </a-button>
+        </div>
+
+        <!-- 快速提示 -->
+        <div class="quick-tips" v-if="!hasSearched && !searchKeyword">
+          <div class="tips-title">搜索建议</div>
+          <div class="tips-grid">
+            <div 
+              v-for="tip in searchTips" 
+              :key="tip"
+              class="tip-item"
+              @click="applySearchTip(tip)"
+            >
+              {{ tip }}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
 
+      <!-- 搜索结果区域 -->
+      <transition name="results-fade">
+        <div v-if="hasSearched" class="results-section">
+          <!-- 结果统计和筛选 -->
+          <div class="results-meta">
+            <div class="meta-info">
+              约为 {{ searchResults.length }} 条结果（用时 {{ searchTime }} 秒）
+            </div>
+            <div class="filter-options">
+              <a-radio-group v-model:value="filterType" size="small">
+                <a-radio-button value="all">全部</a-radio-button>
+                <a-radio-button value="images">图片</a-radio-button>
+                <a-radio-button value="news">新闻</a-radio-button>
+                <a-radio-button value="videos">视频</a-radio-button>
+              </a-radio-group>
+            </div>
+          </div>
+
+          <!-- 搜索结果列表 -->
+          <div class="results-content">
+            <a-card class="results-card" :bordered="false">
+              <a-list
+                item-layout="vertical"
+                :data-source="searchResults"
+                :loading="searchLoading"
+                :pagination="paginationConfig"
+              >
+                <template #renderItem="{ item, index }">
+                  <a-list-item class="result-item">
+                    <div class="result-number">{{ index + 1 }}</div>
+                    <a-list-item-meta :description="item.description">
+                      <template #title>
+                        <a :href="item.url" target="_blank" class="result-title">
+                          {{ item.title }}
+                          <span class="external-icon">↗</span>
+                        </a>
+                      </template>
+                      <template #avatar>
+                        <div class="result-avatar">
+                          <span class="result-url">{{ item.displayUrl }}</span>
+                        </div>
+                      </template>
+                    </a-list-item-meta>
+                    <div class="result-content">
+                      <div class="result-snippet">{{ item.snippet }}</div>
+                      <div class="result-meta">
+                        <span class="publish-date">{{ item.date }}</span>
+                        <a-tag v-if="item.featured" color="blue" class="feature-tag">精选</a-tag>
+                      </div>
+                    </div>
+                  </a-list-item>
+                </template>
+                
+                <template #loadMore>
+                  <div v-if="searchLoading" class="loading-more">
+                    <a-spin />
+                  </div>
+                </template>
+              </a-list>
+            </a-card>
+
+            <!-- 相关搜索 -->
+            <div class="related-searches">
+              <h3 class="related-title">相关搜索</h3>
+              <div class="related-tags">
+                <a-tag 
+                  v-for="related in relatedSearches" 
+                  :key="related"
+                  class="related-tag"
+                  @click="applyRelatedSearch(related)"
+                >
+                  {{ related }}
+                </a-tag>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </main>
+  </div>
 </template>
 
-<script>
-import { SearchOutlined, MenuOutlined } from '@ant-design/icons-vue';
+<script setup>
+import { ref, onMounted, nextTick } from 'vue'
+import { SearchOutlined, SettingOutlined, MenuOutlined } from '@ant-design/icons-vue'
+import {App} from "../../../bindings/go-site-clone";
 
-export default {
-  components: {
-    SearchOutlined,
-    MenuOutlined
-  },
-  data() {
-    return {
-      searchQuery: '',
-      isSearching: false,
-      showResults: false
-    };
-  },
-  methods: {
-    async handleSearch() {
-      if (!this.searchQuery.trim()) return;
+// 搜索状态
+const searchKeyword = ref('')
+const hasSearched = ref(false)
+const searchLoading = ref(false)
+const searchTime = ref(0)
+const searchInputRef = ref()
+const isInputFocused = ref(false)
+const filterType = ref('all')
 
-      // 触发搜索状态
-      this.isSearching = true;
+// 分页配置
+const paginationConfig = {
+  pageSize: 10,
+  showSizeChanger: false,
+  showQuickJumper: true,
+  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条结果`
+}
 
-      // 等待下一个 tick 确保 DOM 已更新
-      await this.$nextTick();
+// 搜索提示和建议
+const searchTips = [
+  'Vue.js 最新特性',
+  'Nuxt 4 新功能',
+  'Ant Design Vue 使用指南',
+  '前端开发最佳实践'
+]
 
-      // 添加动画类
-      if (this.$refs.searchContainer) {
-        this.$refs.searchContainer.classList.add('animating');
+const relatedSearches = [
+  'Vue 3 Composition API',
+  'Nuxt 服务端渲染',
+  'Ant Design 主题定制',
+  'TypeScript 教程'
+]
 
-        // 动画结束后显示结果
-        setTimeout(() => {
-          if (this.$refs.searchContainer) {
-            this.$refs.searchContainer.classList.remove('animating');
-          }
-          this.showResults = true;
+// 模拟搜索结果
+const searchResults = ref([])
 
-          // 可选：滚动到顶部
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 500); // 匹配 CSS 动画时长
-      }
-    },
-    handleFeelingLucky() {
-      // 手气不错功能
-      window.open('https://www.google.com/doodles', '_blank');
-    }
+const isValidURL = (str) => { try { new URL(str); return true; } catch { return false; }}
+
+// 搜索处理函数
+const handleSearch = async () => {
+
+  if (!searchKeyword.value.trim()) {
+    return
   }
-};
+  if (!isValidURL(searchKeyword.value.trim())) {
+    return
+  }
+  searchLoading.value = true
+  const startTime = Date.now()
+  
+  // 模拟搜索延迟
+  await new Promise(resolve => setTimeout(resolve, 1200))
+  
+  searchTime.value = (Date.now() - startTime) / 1000
+  hasSearched.value = true
+  searchLoading.value = false
+  
+  // 生成模拟搜索结果
+  searchResults.value = [
+    {
+      title: 'Vue.js - 渐进式 JavaScript 框架 | 最新版本特性详解',
+      description: '官方文档 • 最新更新',
+      url: 'https://vuejs.org',
+      displayUrl: 'https://vuejs.org',
+      snippet: 'Vue.js 是一套用于构建用户界面的渐进式框架。与其它大型框架不同的是，Vue 被设计为可以自底向上逐层应用。Vue 3 引入了 Composition API、性能优化等新特性。',
+      date: '2024年10月15日',
+      featured: true
+    },
+    {
+      title: 'Nuxt.js - 直观的 Vue 框架 | 服务端渲染解决方案',
+      description: 'Nuxt.js 官方网站',
+      url: 'https://nuxtjs.org',
+      displayUrl: 'https://nuxtjs.org',
+      snippet: 'Nuxt.js 是一个基于 Vue.js 的轻量级应用框架，可用来创建服务端渲染 (SSR) 应用，也可作为静态站点生成器。Nuxt 4 带来了更好的性能和开发体验。',
+      date: '2024年9月20日',
+      featured: false
+    },
+    {
+      title: 'Ant Design Vue - 企业级 Vue UI 组件库',
+      description: 'Ant Design 的 Vue 实现',
+      url: 'https://antdv.com',
+      displayUrl: 'https://antdv.com',
+      snippet: 'Ant Design Vue 为 Web 应用提供了丰富的基础 UI 组件，助力设计人员快速构建美观统一的产品。',
+      date: '2024年8月15日',
+      featured: true
+    },
+    {
+      title: 'Google 搜索首页的演变与设计理念',
+      description: '设计历史文章',
+      url: 'https://example.com/google-design',
+      displayUrl: 'https://example.com/google-design',
+      snippet: '了解 Google 搜索首页从简单到现代的设计演变过程，探索其用户体验设计理念和简约美学。',
+      date: '2024年7月22日',
+      featured: false
+    }
+  ]
+  
+  nextTick(() => {
+    setTimeout(() => {
+      searchInputRef.value?.focus()
+      App.GetResources(searchKeyword.value.trim()).then((res) => {
+        console.log(res);
+        
+      })
+    }, 400)
+  })
+} 
+
+// 输入框焦点事件
+const onInputFocus = () => {
+  isInputFocused.value = true
+}
+
+const onInputBlur = () => {
+  isInputFocused.value = false
+}
+
+// 辅助功能
+const handleFeelingLucky = () => {
+  searchKeyword.value = 'Ant Design Vue 在 Nuxt 4 中的集成指南'
+  handleSearch()
+}
+
+const handleVoiceSearch = () => {
+  console.log('语音搜索功能')
+}
+
+const handleImageSearch = () => {
+  console.log('图片搜索功能')
+}
+
+const applySearchTip = (tip) => {
+  searchKeyword.value = tip
+  handleSearch()
+}
+
+const applyRelatedSearch = (query) => {
+  searchKeyword.value = query
+  handleSearch()
+}
+
+// 页面加载后自动聚焦搜索框
+onMounted(() => {
+  nextTick(() => {
+    searchInputRef.value?.focus()
+  })
+})
 </script>
 
 <style scoped>
-.google-like-page {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 154px);
-  background-color: #fff;
-  font-family: Arial, sans-serif;
+.google-search-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.header {
-  display: flex;
-  justify-content: flex-end;
-  padding: 15px 20px;
+.background-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+.floating-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  animation: float 6s ease-in-out infinite;
 }
 
-.nav-links a {
-  text-decoration: none;
-  color: rgba(0, 0, 0, 0.87);
-  font-size: 13px;
+.circle-1 {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  right: 10%;
+  animation-delay: 0s;
 }
 
-.nav-links a:hover {
-  text-decoration: underline;
+.circle-2 {
+  width: 150px;
+  height: 150px;
+  top: 60%;
+  left: 5%;
+  animation-delay: 2s;
 }
 
-.apps-button {
-  color: #5f6368;
+.circle-3 {
+  width: 100px;
+  height: 100px;
+  bottom: 20%;
+  right: 20%;
+  animation-delay: 4s;
 }
 
 .main-content {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 搜索区域样式 */
+.search-section {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  margin-top: 60px;
-  /* 为顶部导航留出空间 */
+  padding: 2rem;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
 }
 
-.logo-container {
-  margin-bottom: 30px;
-  transition: all 0.5s ease;
+.search-section.collapsed {
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 1rem 2rem;
+  animation: slideUp 0.6s ease-out;
 }
 
-.logo {
+/* Logo 样式 */
+.logo-section {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.google-logo {
   font-size: 5rem;
   font-weight: 400;
-  color: #4285f4;
-  margin: 0;
-  transition: all 0.5s ease;
-}
-
-.logo-small .logo {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.search-container {
-  width: 100%;
-  max-width: 600px;
-  transition: all 0.5s ease;
+  margin-bottom: 0.5rem;
   display: flex;
   justify-content: center;
+  gap: 0.5rem;
 }
 
-.search-container.animating {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+.logo-letter {
+  display: inline-block;
+  animation: bounce 0.5s ease;
 }
 
-.search-top {
-  position: fixed;
-  top: 180px;
-  z-index: 999;
-  max-width: 500px;
-  transform: translateX(-50%);
-  left: 50%;
-}
+.logo-letter.g { color: #4285f4; animation-delay: 0.1s; }
+.logo-letter.o1 { color: #ea4335; animation-delay: 0.2s; }
+.logo-letter.o2 { color: #fbbc05; animation-delay: 0.3s; }
+.logo-letter.g2 { color: #4285f4; animation-delay: 0.4s; }
+.logo-letter.l { color: #34a853; animation-delay: 0.5s; }
+.logo-letter.e { color: #ea4335; animation-delay: 0.6s; }
 
-.search-box {
-  width: 100%;
+.small-logo {
+  font-size: 1.5rem;
+  font-weight: 500;
   display: flex;
-  flex-direction: column;
+  gap: 2px;
+}
+
+.logo-small-g { color: #4285f4; }
+.logo-small-o1 { color: #ea4335; }
+.logo-small-o2 { color: #fbbc05; }
+.logo-small-g2 { color: #4285f4; }
+.logo-small-l { color: #34a853; }
+.logo-small-e { color: #ea4335; }
+
+.country-indicator {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.2rem;
+}
+
+/* 搜索输入框样式 */
+.search-input-container {
+  width: 100%;
+  max-width: 584px;
+  margin-bottom: 2rem;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
   align-items: center;
-}
-
-.search-input {
-  width: 100%;
-  height: 44px;
+  background: white;
   border-radius: 24px;
-  padding: 0 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+  padding: 0.5rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.search-input-wrapper.focused {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  border-color: #4285f4;
+}
+
+.search-icon {
+  color: #9aa0a6;
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.enhanced-search-input {
   border: none;
+  box-shadow: none !important;
+  background: transparent;
+  flex: 1;
 }
 
-.search-input :deep(.ant-input) {
-  border-radius: 24px;
-  height: 44px;
+:deep(.enhanced-search-input .ant-input) {
+  background: transparent;
   border: none;
-  outline: none;
+  font-size: 1.1rem;
+  padding: 8px 4px;
 }
 
-.search-input :deep(.ant-input):focus {
-  box-shadow: none;
-}
-
-.search-buttons {
+.input-right-icons {
   display: flex;
-  gap: 10px;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
 }
 
-.search-buttons .ant-btn {
-  background-color: #f8f9fa;
-  border: 1px solid #f8f9fa;
+.voice-icon, .lens-icon {
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease;
+  padding: 4px;
+}
+
+.voice-icon:hover, .lens-icon:hover {
+  transform: scale(1.1);
+}
+
+/* 操作按钮样式 */
+.action-section {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.search-btn {
   border-radius: 4px;
-  color: #3c4043;
-  font-size: 14px;
-  padding: 0 16px;
+  padding: 0.5rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.primary-btn {
+  background: #1a73e8;
+  border-color: #1a73e8;
+}
+
+.primary-btn:hover {
+  background: #1669d9;
+  border-color: #1669d9;
+  transform: translateY(-1px);
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* 快速提示样式 */
+.quick-tips {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 100%;
+}
+
+.tips-title {
+  color: white;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.tip-item {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.tip-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* 搜索结果区域样式 */
+.results-fade-enter-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.results-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.results-section {
+  background: white;
+  border-radius: 12px 12px 0 0;
+  margin-top: 1rem;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  flex: 1;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #e8eaed;
+  background: white;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.search-box-mini {
+  width: 400px;
+}
+
+:deep(.mini-search-input .ant-input) {
+  border-radius: 4px;
+  border: 1px solid #dfe1e5;
   height: 36px;
 }
 
-.search-buttons .ant-btn-primary {
-  background-color: #f8f9fa;
-  border-color: #f8f9fa;
-  color: #3c4043;
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.search-buttons .ant-btn-primary:hover {
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
-  background-color: #f8f9fa;
-  border: 1px solid #dadce0;
-  color: #202124;
+.header-btn, .sign-in-btn {
+  border-radius: 4px;
 }
 
-.search-results {
-  margin-top: 50px;
-  width: 100%;
-  max-width: 600px;
+/* 结果统计 */
+.results-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e8eaed;
 }
 
-.footer {
+.meta-info {
+  color: #70757a;
+  font-size: 0.9rem;
+}
+
+/* 结果项样式 */
+.results-content {
+  padding: 0 2rem 2rem;
+}
+
+.result-item {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+}
+
+.result-number {
+  position: absolute;
+  left: -2rem;
+  top: 1.5rem;
+  color: #70757a;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.result-title {
+  font-size: 1.3rem;
+  color: #1a0dab;
+  text-decoration: none;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.2s ease;
+}
+
+.result-title:hover {
+  text-decoration: underline;
+  color: #1a0dab;
+}
+
+.external-icon {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.result-avatar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-url {
+  color: #006621;
+  font-size: 0.9rem;
+}
+
+.result-snippet {
+  color: #4d5156;
+  line-height: 1.6;
+  margin: 0.5rem 0;
+}
+
+.result-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.publish-date {
+  color: #70757a;
+  font-size: 0.9rem;
+}
+
+.feature-tag {
+  font-size: 0.8rem;
+}
+
+/* 相关搜索 */
+.related-searches {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.related-title {
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.related-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.related-tag {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.related-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 页脚样式 */
+.page-footer {
   background: #f2f2f2;
   border-top: 1px solid #e4e4e4;
-  padding: 15px 20px;
+  padding: 1rem 0;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-location {
+  color: #70757a;
+  font-size: 0.9rem;
 }
 
 .footer-links {
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  gap: 1.5rem;
 }
 
-.footer-links a {
+.footer-link {
+  color: #70757a;
   text-decoration: none;
-  color: #5f6368;
-  font-size: 14px;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
 }
 
-.footer-links a:hover {
-  text-decoration: underline;
+.footer-link:hover {
+  color: #1a73e8;
+}
+
+/* 动画定义 */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes slideUp {
+  0% { 
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0.8;
+  }
+  100% { 
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .logo {
+  .google-logo {
     font-size: 3rem;
+    flex-wrap: wrap;
   }
-
-  .logo-small .logo {
-    font-size: 1.5rem;
+  
+  .search-input-container {
+    max-width: 100%;
   }
-
-  .search-container {
-    max-width: 90%;
+  
+  .search-box-mini {
+    width: 200px;
   }
-
-  .search-top {
-    max-width: 80%;
+  
+  .tips-grid {
+    grid-template-columns: 1fr;
   }
-
-  .search-buttons {
+  
+  .results-header {
     flex-direction: column;
-    width: 100%;
+    gap: 1rem;
+    padding: 1rem;
   }
+  
+  .header-left, .header-right {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .results-meta {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .footer-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+}
 
-  .search-buttons .ant-btn {
-    width: 100%;
-  }
+/* 加载状态 */
+.loading-more {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
 }
 </style>

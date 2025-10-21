@@ -21,6 +21,13 @@ type RequestParams struct {
 	URL  string                    `json:"url"`
 }
 
+type ResourcesList struct {
+	Script []string `json:"script"`
+	CSS    []string `json:"css"`
+	Image  []string `json:"image"`
+	Dom    []string `json:"dom"`
+}
+
 // 获取当前页面的所有本站资源 js、css、img、链接
 func (s SiteService) GetAllResources(rawURL string) ([]RequestParams, []string) {
 	var RequestParamsAll []RequestParams
@@ -43,14 +50,14 @@ func (s SiteService) GetAllResources(rawURL string) ([]RequestParams, []string) 
 	s.BaseDomain = parsed.Hostname()
 	ActiveHref["https://"+host] = struct{}{}
 	// 进入主站
-	// browser := obj.Browser
+	browser := obj.Browser
 	page := obj.Page
 	s.LoopGet(page, PastHref, ActiveHref, &RequestParamsAll)
 	for k := range PastHref {
 		RouterAll = append(RouterAll, k)
 	}
 	list := deduplicationRequest(RequestParamsAll)
-	// 资源去重
+	browser.Close()
 	return list, RouterAll
 }
 
