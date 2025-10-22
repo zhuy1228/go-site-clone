@@ -65,7 +65,7 @@
 
         <!-- 快速提示 -->
         <div class="quick-tips" v-if="!hasSearched && !searchKeyword">
-          <div class="tips-title">搜索建议</div>
+          <div class="tips-title">搜索历史</div>
           <div class="tips-grid">
             <div 
               v-for="tip in searchTips" 

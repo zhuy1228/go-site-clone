@@ -26,6 +26,7 @@ type ResourcesList struct {
 	CSS    []string `json:"css"`
 	Image  []string `json:"image"`
 	Dom    []string `json:"dom"`
+	Video  []string `json:"video"`
 }
 
 // 获取当前页面的所有本站资源 js、css、img、链接

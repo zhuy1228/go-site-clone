@@ -40,6 +40,13 @@ export class ResourcesList {
              */
             this["dom"] = [];
         }
+        if (!("video" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["video"] = [];
+        }
 
         Object.assign(this, $$source);
     }
@@ -54,6 +61,7 @@ export class ResourcesList {
         const $$createField1_0 = $$createType0;
         const $$createField2_0 = $$createType0;
         const $$createField3_0 = $$createType0;
+        const $$createField4_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("script" in $$parsedSource) {
             $$parsedSource["script"] = $$createField0_0($$parsedSource["script"]);
@@ -66,6 +74,9 @@ export class ResourcesList {
         }
         if ("dom" in $$parsedSource) {
             $$parsedSource["dom"] = $$createField3_0($$parsedSource["dom"]);
+        }
+        if ("video" in $$parsedSource) {
+            $$parsedSource["video"] = $$createField4_0($$parsedSource["video"]);
         }
         return new ResourcesList(/** @type {Partial<ResourcesList>} */($$parsedSource));
     }

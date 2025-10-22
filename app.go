@@ -31,6 +31,9 @@ func (a *App) GetResources(rawURL string) *services.ResourcesList {
 		if v.Type == proto.NetworkResourceTypeScript {
 			resources.Script = append(resources.Script, v.URL)
 		}
+		if v.Type == proto.NetworkResourceTypeMedia {
+			resources.Video = append(resources.Video, v.URL)
+		}
 	}
 
 	return resources
