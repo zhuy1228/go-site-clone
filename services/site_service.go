@@ -59,6 +59,7 @@ func (s SiteService) GetAllResources(rawURL string) ([]RequestParams, []string) 
 	}
 	list := deduplicationRequest(RequestParamsAll)
 	browser.Close()
+	Browser.CancelBrowser(host)
 	return list, RouterAll
 }
 

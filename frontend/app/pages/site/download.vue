@@ -85,14 +85,15 @@
           <!-- 结果统计和筛选 -->
           <div class="results-meta">
             <div class="meta-info">
-              约为 {{ searchResults.length }} 条结果（用时 {{ searchTime }} 秒）
+              用时 {{ searchTime }} 秒
             </div>
             <div class="filter-options">
               <a-radio-group v-model:value="filterType" size="small">
                 <a-radio-button value="all">全部</a-radio-button>
                 <a-radio-button value="images">图片</a-radio-button>
-                <a-radio-button value="news">新闻</a-radio-button>
-                <a-radio-button value="videos">视频</a-radio-button>
+                <a-radio-button value="news">样式</a-radio-button>
+                <a-radio-button value="videos">脚本</a-radio-button>
+                <a-radio-button value="videos">媒体</a-radio-button>
               </a-radio-group>
             </div>
           </div>
@@ -102,36 +103,60 @@
             <a-card class="results-card" :bordered="false">
               <a-list
                 item-layout="vertical"
-                :data-source="searchResults"
                 :loading="searchLoading"
                 :pagination="paginationConfig"
               >
-                <template #renderItem="{ item, index }">
-                  <a-list-item class="result-item">
-                    <div class="result-number">{{ index + 1 }}</div>
-                    <a-list-item-meta :description="item.description">
-                      <template #title>
-                        <a :href="item.url" target="_blank" class="result-title">
-                          {{ item.title }}
-                          <span class="external-icon">↗</span>
-                        </a>
-                      </template>
-                      <template #avatar>
-                        <div class="result-avatar">
-                          <span class="result-url">{{ item.displayUrl }}</span>
-                        </div>
-                      </template>
-                    </a-list-item-meta>
-                    <div class="result-content">
-                      <div class="result-snippet">{{ item.snippet }}</div>
-                      <div class="result-meta">
-                        <span class="publish-date">{{ item.date }}</span>
-                        <a-tag v-if="item.featured" color="blue" class="feature-tag">精选</a-tag>
-                      </div>
-                    </div>
-                  </a-list-item>
-                </template>
-                
+                <a-list-item class="result-item">
+                  <a-list-item-meta description="页面文件过多可能是当前站点包含博客、教程页面。">
+                    <template #title>
+                      <a class="result-title">页面文件</a>
+                    </template>
+                  </a-list-item-meta>
+                  <div class="result-content">
+                    <div class="result-snippet">可下载：{{ searchResults?.dom.length }}</div>
+                  </div>
+                </a-list-item>
+
+                <a-list-item class="result-item">
+                  <a-list-item-meta description="统计包含站点所有图片资源，包含站外、站内，默认只下载站内资源。">
+                    <template #title>
+                      <a class="result-title">图片文件</a>
+                    </template>
+                  </a-list-item-meta>
+                  <div class="result-content">
+                    <div class="result-snippet">可下载：{{ searchResults?.image.length }}</div>
+                  </div>
+                </a-list-item>
+                <a-list-item class="result-item">
+                  <a-list-item-meta description="统计包含站点所有CSS资源，包含站外、站内，默认只下载站内资源。">
+                    <template #title>
+                      <a class="result-title">样式文件</a>
+                    </template>
+                  </a-list-item-meta>
+                  <div class="result-content">
+                    <div class="result-snippet">可下载：{{ searchResults?.css.length }}</div>
+                  </div>
+                </a-list-item>
+                <a-list-item class="result-item">
+                  <a-list-item-meta  description="统计包含站点所有脚本资源，包含站外、站内，默认只下载站内资源。">
+                    <template #title>
+                      <a class="result-title">脚本文件</a>
+                    </template>
+                  </a-list-item-meta>
+                  <div class="result-content">
+                    <div class="result-snippet">可下载：{{ searchResults?.script.length }}</div>
+                  </div>
+                </a-list-item>
+                <a-list-item class="result-item">
+                  <a-list-item-meta description="统计包含站点所有媒体资源，包含站外、站内，默认只下载站内资源。">
+                    <template #title>
+                      <a class="result-title">媒体文件</a>
+                    </template>
+                  </a-list-item-meta>
+                  <div class="result-content">
+                    <div class="result-snippet">可下载：{{ searchResults?.video.length }}</div>
+                  </div>
+                </a-list-item>
                 <template #loadMore>
                   <div v-if="searchLoading" class="loading-more">
                     <a-spin />
@@ -165,7 +190,8 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { SearchOutlined, SettingOutlined, MenuOutlined } from '@ant-design/icons-vue'
 import {App} from "../../../bindings/go-site-clone";
-
+const { $message } = useNuxtApp();
+const [messageApi, contextHolder] = $message.useMessage();
 // 搜索状态
 const searchKeyword = ref('')
 const hasSearched = ref(false)
@@ -199,12 +225,33 @@ const relatedSearches = [
 ]
 
 // 模拟搜索结果
-const searchResults = ref([])
+const searchResults = ref({
+  script: [],
+  css: [],
+  image: [],
+  dom: [],
+  video: [],
+})
+
+const resourceData = ref({
+  script: [],
+  scriptD: [],
+  css: [],
+  cssD: [],
+  image: [],
+  imageD: [],
+  video: [],
+  videoD: []
+})
 
 const isValidURL = (str) => { try { new URL(str); return true; } catch { return false; }}
 
 // 搜索处理函数
 const handleSearch = async () => {
+  if (searchLoading.value == true) {
+    messageApi.info('当前已有网址在获取详情!');
+    return
+  }
 
   if (!searchKeyword.value.trim()) {
     return
@@ -215,59 +262,16 @@ const handleSearch = async () => {
   searchLoading.value = true
   const startTime = Date.now()
   
-  // 模拟搜索延迟
-  await new Promise(resolve => setTimeout(resolve, 1200))
-  
-  searchTime.value = (Date.now() - startTime) / 1000
-  hasSearched.value = true
-  searchLoading.value = false
-  
-  // 生成模拟搜索结果
-  searchResults.value = [
-    {
-      title: 'Vue.js - 渐进式 JavaScript 框架 | 最新版本特性详解',
-      description: '官方文档 • 最新更新',
-      url: 'https://vuejs.org',
-      displayUrl: 'https://vuejs.org',
-      snippet: 'Vue.js 是一套用于构建用户界面的渐进式框架。与其它大型框架不同的是，Vue 被设计为可以自底向上逐层应用。Vue 3 引入了 Composition API、性能优化等新特性。',
-      date: '2024年10月15日',
-      featured: true
-    },
-    {
-      title: 'Nuxt.js - 直观的 Vue 框架 | 服务端渲染解决方案',
-      description: 'Nuxt.js 官方网站',
-      url: 'https://nuxtjs.org',
-      displayUrl: 'https://nuxtjs.org',
-      snippet: 'Nuxt.js 是一个基于 Vue.js 的轻量级应用框架，可用来创建服务端渲染 (SSR) 应用，也可作为静态站点生成器。Nuxt 4 带来了更好的性能和开发体验。',
-      date: '2024年9月20日',
-      featured: false
-    },
-    {
-      title: 'Ant Design Vue - 企业级 Vue UI 组件库',
-      description: 'Ant Design 的 Vue 实现',
-      url: 'https://antdv.com',
-      displayUrl: 'https://antdv.com',
-      snippet: 'Ant Design Vue 为 Web 应用提供了丰富的基础 UI 组件，助力设计人员快速构建美观统一的产品。',
-      date: '2024年8月15日',
-      featured: true
-    },
-    {
-      title: 'Google 搜索首页的演变与设计理念',
-      description: '设计历史文章',
-      url: 'https://example.com/google-design',
-      displayUrl: 'https://example.com/google-design',
-      snippet: '了解 Google 搜索首页从简单到现代的设计演变过程，探索其用户体验设计理念和简约美学。',
-      date: '2024年7月22日',
-      featured: false
-    }
-  ]
-  
   nextTick(() => {
     setTimeout(() => {
       searchInputRef.value?.focus()
       App.GetResources(searchKeyword.value.trim()).then((res) => {
-        console.log(res);
-        
+        if(res) {
+          searchResults.value = res
+        }
+        searchTime.value = (Date.now() - startTime) / 1000
+        hasSearched.value = true
+        searchLoading.value = false
       })
     }, 400)
   })
