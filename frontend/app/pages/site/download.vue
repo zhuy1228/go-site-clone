@@ -124,7 +124,9 @@
                     </template>
                   </a-list-item-meta>
                   <div class="result-content">
-                    <div class="result-snippet">可下载：{{ searchResults?.image.length }}</div>
+                    <div class="result-snippet">总数：{{ searchResults?.image.length }}</div>
+                    <div class="result-snippet">本站资源：{{ resourceData?.imageD.length }}</div>
+                    <div class="result-snippet">其他资源：{{ resourceData?.image.length }}</div>
                   </div>
                 </a-list-item>
                 <a-list-item class="result-item">
@@ -134,7 +136,9 @@
                     </template>
                   </a-list-item-meta>
                   <div class="result-content">
-                    <div class="result-snippet">可下载：{{ searchResults?.css.length }}</div>
+                    <div class="result-snippet">总数：{{ searchResults?.css.length }}</div>
+                    <div class="result-snippet">本站资源：{{ resourceData?.cssD.length }}</div>
+                    <div class="result-snippet">其他资源：{{ resourceData?.css.length }}</div>
                   </div>
                 </a-list-item>
                 <a-list-item class="result-item">
@@ -144,7 +148,9 @@
                     </template>
                   </a-list-item-meta>
                   <div class="result-content">
-                    <div class="result-snippet">可下载：{{ searchResults?.script.length }}</div>
+                    <div class="result-snippet">总数：{{ searchResults?.script.length }}</div>
+                    <div class="result-snippet">本站资源：{{ resourceData?.scriptD.length }}</div>
+                    <div class="result-snippet">其他资源：{{ resourceData?.script.length }}</div>
                   </div>
                 </a-list-item>
                 <a-list-item class="result-item">
@@ -154,7 +160,9 @@
                     </template>
                   </a-list-item-meta>
                   <div class="result-content">
-                    <div class="result-snippet">可下载：{{ searchResults?.video.length }}</div>
+                    <div class="result-snippet">总数：{{ searchResults?.video.length }}</div>
+                    <div class="result-snippet">本站资源：{{ resourceData?.videoD.length }}</div>
+                    <div class="result-snippet">其他资源：{{ resourceData?.video.length }}</div>
                   </div>
                 </a-list-item>
                 <template #loadMore>
@@ -268,6 +276,39 @@ const handleSearch = async () => {
       App.GetResources(searchKeyword.value.trim()).then((res) => {
         if(res) {
           searchResults.value = res
+          const urlData = new URL(searchKeyword.value.trim())
+          for (let i = 0; i < res.image.length; i++) {
+            const item = new URL(res.image[i]);
+            if (urlData.hostname == item.hostname) {
+              resourceData.value.imageD.push(item)
+            } else {
+              resourceData.value.image.push(item)
+            }
+          }
+          for (let i = 0; i < res.css.length; i++) {
+            const item = new URL(res.css[i]);
+            if (urlData.hostname == item.hostname) {
+              resourceData.value.cssD.push(item)
+            } else {
+              resourceData.value.css.push(item)
+            }
+          }
+          for (let i = 0; i < res.script.length; i++) {
+            const item = new URL(res.script[i]);
+            if (urlData.hostname == item.hostname) {
+              resourceData.value.scriptD.push(item)
+            } else {
+              resourceData.value.script.push(item)
+            }
+          }
+          for (let i = 0; i < res.video.length; i++) {
+            const item = new URL(res.video[i]);
+            if (urlData.hostname == item.hostname) {
+              resourceData.value.videoD.push(item)
+            } else {
+              resourceData.value.video.push(item)
+            }
+          }
         }
         searchTime.value = (Date.now() - startTime) / 1000
         hasSearched.value = true
