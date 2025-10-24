@@ -11,7 +11,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as services$0 from "./services/models.js";
 
 /**
- * @param {string} obj
+ * @param {services$0.ResourcesList} obj
  * @returns {$CancellablePromise<boolean>}
  */
 export function DownloadSite(obj) {

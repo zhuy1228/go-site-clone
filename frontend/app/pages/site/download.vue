@@ -256,7 +256,7 @@ const isValidURL = (str) => { try { new URL(str); return true; } catch { return 
 
 // 下载当前页面资源
 const downloadResource = async ()=> {
-  App.DownloadSite(JSON.stringify(searchResults))
+  App.DownloadSite(searchResults.value)
 }
 
 // 搜索处理函数

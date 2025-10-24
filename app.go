@@ -2,7 +2,7 @@ package main
 
 import (
 	"go-site-clone/services"
-	"log"
+	"go-site-clone/utils"
 
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -40,39 +40,39 @@ func (a *App) GetResources(rawURL string) *services.ResourcesList {
 	return resources
 }
 
-func (a *App) DownloadSite(obj string) bool {
+func (a *App) DownloadSite(obj services.ResourcesList) bool {
 	// 将页面及资源一起返回
-	log.Println(obj)
-	// var File utils.File
-	// if len(obj.CSS) > 0 {
-	// 	for k, v := range obj.CSS {
-	// 		File.Download(v)
-	// 		a.app.Event.Emit("download:css", k)
-	// 	}
-	// }
-	// if len(obj.Script) > 0 {
-	// 	for k, v := range obj.Script {
-	// 		File.Download(v)
-	// 		a.app.Event.Emit("download:script", k)
-	// 	}
-	// }
-	// if len(obj.Image) > 0 {
-	// 	for k, v := range obj.Image {
-	// 		File.Download(v)
-	// 		a.app.Event.Emit("download:script", k)
-	// 	}
-	// }
-	// if len(obj.Video) > 0 {
-	// 	for k, v := range obj.Video {
-	// 		File.Download(v)
-	// 		a.app.Event.Emit("download:video", k)
-	// 	}
-	// }
-	// if len(obj.Dom) > 0 {
-	// 	for k, v := range obj.Dom {
-	// 		File.HTMLDownload(v)
-	// 		a.app.Event.Emit("download:dom", k)
-	// 	}
-	// }
+
+	var File utils.File
+	if len(obj.CSS) > 0 {
+		for k, v := range obj.CSS {
+			File.Download(v)
+			a.app.Event.Emit("download:css", k)
+		}
+	}
+	if len(obj.Script) > 0 {
+		for k, v := range obj.Script {
+			File.Download(v)
+			a.app.Event.Emit("download:script", k)
+		}
+	}
+	if len(obj.Image) > 0 {
+		for k, v := range obj.Image {
+			File.Download(v)
+			a.app.Event.Emit("download:script", k)
+		}
+	}
+	if len(obj.Video) > 0 {
+		for k, v := range obj.Video {
+			File.Download(v)
+			a.app.Event.Emit("download:video", k)
+		}
+	}
+	if len(obj.Dom) > 0 {
+		for k, v := range obj.Dom {
+			File.HTMLDownload(v)
+			a.app.Event.Emit("download:dom", k)
+		}
+	}
 	return true
 }
