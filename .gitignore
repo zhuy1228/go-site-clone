@@ -4,6 +4,8 @@ frontend/dist
 frontend/node_modules
 build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+plugin/go
+plugin/wails3
 
 .DS_Store
 node_modules/

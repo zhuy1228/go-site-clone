@@ -11,10 +11,11 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as services$0 from "./services/models.js";
 
 /**
- * @returns {$CancellablePromise<void>}
+ * @param {string} obj
+ * @returns {$CancellablePromise<boolean>}
  */
-export function DownloadSite() {
-    return $Call.ByID(2539977978);
+export function DownloadSite(obj) {
+    return $Call.ByID(2539977978, obj);
 }
 
 /**

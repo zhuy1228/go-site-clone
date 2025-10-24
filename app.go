@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-site-clone/services"
+	"log"
 
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -39,17 +40,39 @@ func (a *App) GetResources(rawURL string) *services.ResourcesList {
 	return resources
 }
 
-func (a *App) DownloadSite() {
+func (a *App) DownloadSite(obj string) bool {
 	// 将页面及资源一起返回
-	// for _, v := range dataList {
-	// 	u, _ := url.Parse(v.URL)
-	// 	if v.Type == proto.NetworkResourceTypeImage && u.Hostname() == parsed.Hostname() {
-	// 		var File utils.File
-	// 		File.Download(v.URL)
+	log.Println(obj)
+	// var File utils.File
+	// if len(obj.CSS) > 0 {
+	// 	for k, v := range obj.CSS {
+	// 		File.Download(v)
+	// 		a.app.Event.Emit("download:css", k)
 	// 	}
 	// }
-	// for _, v := range RouterAll {
-	// 	var File utils.File
-	// 	File.HTMLDownload(v)
+	// if len(obj.Script) > 0 {
+	// 	for k, v := range obj.Script {
+	// 		File.Download(v)
+	// 		a.app.Event.Emit("download:script", k)
+	// 	}
 	// }
+	// if len(obj.Image) > 0 {
+	// 	for k, v := range obj.Image {
+	// 		File.Download(v)
+	// 		a.app.Event.Emit("download:script", k)
+	// 	}
+	// }
+	// if len(obj.Video) > 0 {
+	// 	for k, v := range obj.Video {
+	// 		File.Download(v)
+	// 		a.app.Event.Emit("download:video", k)
+	// 	}
+	// }
+	// if len(obj.Dom) > 0 {
+	// 	for k, v := range obj.Dom {
+	// 		File.HTMLDownload(v)
+	// 		a.app.Event.Emit("download:dom", k)
+	// 	}
+	// }
+	return true
 }

@@ -85,7 +85,7 @@
           <!-- 结果统计和筛选 -->
           <div class="results-meta">
             <div class="meta-info">
-              用时 {{ searchTime }} 秒
+              用时 {{ searchTime }} 秒 <a-button @click="downloadResource">下载</a-button>
             </div>
             <div class="filter-options">
               <a-radio-group v-model:value="filterType" size="small">
@@ -254,6 +254,11 @@ const resourceData = ref({
 
 const isValidURL = (str) => { try { new URL(str); return true; } catch { return false; }}
 
+// 下载当前页面资源
+const downloadResource = async ()=> {
+  App.DownloadSite(JSON.stringify(searchResults))
+}
+
 // 搜索处理函数
 const handleSearch = async () => {
   if (searchLoading.value == true) {
@@ -317,6 +322,7 @@ const handleSearch = async () => {
     }, 400)
   })
 } 
+
 
 // 输入框焦点事件
 const onInputFocus = () => {

@@ -18,6 +18,16 @@
             <a-menu-item key="download">整站下载</a-menu-item>
             <a-menu-item key="record">仿站记录</a-menu-item>
           </a-sub-menu>
+          <a-sub-menu key="run">
+            <template #title>
+              <span>
+                <IeOutlined />
+                <span>运行</span>
+              </span>
+            </template>
+            <a-menu-item key="webpage">Nginx网站</a-menu-item>
+            <a-menu-item key="pack">打包应用</a-menu-item>
+          </a-sub-menu>
         </a-menu>
       </a-layout-sider>
     </div>
@@ -31,6 +41,7 @@
 import {
   PieChartOutlined,
   UserOutlined,
+  IeOutlined,
 } from '@ant-design/icons-vue';
 import { ref } from 'vue';
 const collapsed = ref<boolean>(false);
