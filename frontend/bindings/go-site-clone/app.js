@@ -9,13 +9,26 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as services$0 from "./services/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as utils$0 from "./utils/models.js";
 
 /**
+ * @param {string} uri
  * @param {services$0.ResourcesList} obj
  * @returns {$CancellablePromise<boolean>}
  */
-export function DownloadSite(obj) {
-    return $Call.ByID(2539977978, obj);
+export function DownloadSite(uri, obj) {
+    return $Call.ByID(2539977978, uri, obj);
+}
+
+/**
+ * @returns {$CancellablePromise<utils$0.FileDir[]>}
+ */
+export function GetDownloadList() {
+    return $Call.ByID(2717901443).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType1($result);
+    }));
 }
 
 /**
@@ -24,10 +37,12 @@ export function DownloadSite(obj) {
  */
 export function GetResources(rawURL) {
     return $Call.ByID(2167352808, rawURL).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
 }
 
 // Private type creation functions
-const $$createType0 = services$0.ResourcesList.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
+const $$createType0 = utils$0.FileDir.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = services$0.ResourcesList.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);

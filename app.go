@@ -3,6 +3,7 @@ package main
 import (
 	"go-site-clone/services"
 	"go-site-clone/utils"
+	"net/url"
 
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -13,6 +14,18 @@ type App struct {
 }
 
 var siteService services.SiteService
+
+// startup is called when the app starts. The context is saved
+// so we can call the runtime methods
+// func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+
+// 	return nil
+// }
+
+// func (a *App) ServiceShutdown(ctx context.Context) error {
+
+// 	return nil
+// }
 
 func (a *App) GetResources(rawURL string) *services.ResourcesList {
 	RequestParamsAll, RouterAll := siteService.GetAllResources(rawURL)
@@ -36,43 +49,61 @@ func (a *App) GetResources(rawURL string) *services.ResourcesList {
 			resources.Video = append(resources.Video, v.URL)
 		}
 	}
-
 	return resources
 }
 
-func (a *App) DownloadSite(obj services.ResourcesList) bool {
+func (a *App) DownloadSite(uri string, obj services.ResourcesList) bool {
 	// 将页面及资源一起返回
-
+	parsed, _ := url.Parse(uri)
 	var File utils.File
 	if len(obj.CSS) > 0 {
 		for k, v := range obj.CSS {
-			File.Download(v)
+			u, _ := url.Parse(v)
+			if parsed.Hostname() == u.Hostname() {
+				File.Download(v)
+			}
 			a.app.Event.Emit("download:css", k)
 		}
 	}
 	if len(obj.Script) > 0 {
 		for k, v := range obj.Script {
-			File.Download(v)
+			u, _ := url.Parse(v)
+			if parsed.Hostname() == u.Hostname() {
+				File.Download(v)
+			}
 			a.app.Event.Emit("download:script", k)
 		}
 	}
 	if len(obj.Image) > 0 {
 		for k, v := range obj.Image {
-			File.Download(v)
-			a.app.Event.Emit("download:script", k)
+			u, _ := url.Parse(v)
+			if parsed.Hostname() == u.Hostname() {
+				File.Download(v)
+			}
+			a.app.Event.Emit("download:image", k)
 		}
 	}
 	if len(obj.Video) > 0 {
 		for k, v := range obj.Video {
-			File.Download(v)
+			u, _ := url.Parse(v)
+			if parsed.Hostname() == u.Hostname() {
+				File.Download(v)
+			}
 			a.app.Event.Emit("download:video", k)
 		}
 	}
 	if len(obj.Dom) > 0 {
 		for k, v := range obj.Dom {
-			File.HTMLDownload(v)
+			u, _ := url.Parse(v)
+			if parsed.Hostname() == u.Hostname() {
+				File.HTMLDownload(v)
+			}
 			a.app.Event.Emit("download:dom", k)
 		}
 	}
 	return true
+}
+
+func (a *App) GetDownloadList() []utils.FileDir {
+	return siteService.GetLocalSiteList()
 }

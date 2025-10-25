@@ -1,7 +1,9 @@
 package services
 
 import (
+	"go-site-clone/config"
 	"go-site-clone/libs"
+	"go-site-clone/utils"
 	"log"
 	"net/url"
 	"strings"
@@ -205,4 +207,12 @@ func (s SiteService) DeduplicationRequestByUrl(list []RequestParams) []RequestPa
 	}
 
 	return newList
+}
+
+// 获取下载的网站列表
+func (s SiteService) GetLocalSiteList() []utils.FileDir {
+	var file utils.File
+	appConfig, _ := config.LoadConfig()
+	list := file.GetFileDirList(appConfig.SiteFileDir)
+	return list
 }

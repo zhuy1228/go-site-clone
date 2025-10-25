@@ -10,10 +10,19 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 )
 
 type File struct{}
 
+type FileDir struct {
+	Name    string    `json:"name"`
+	Size    int64     `json:"size"`
+	Mode    string    `json:"mode"`
+	ModTime time.Time `json:"modTime"`
+}
+
+// 下载文件到本地
 func (*File) Download(uri string) string {
 	// 解析文件链接及 路径
 	u, err := url.Parse(uri)
@@ -54,6 +63,7 @@ func (*File) Download(uri string) string {
 	return fp
 }
 
+// 创建目录
 func CreateFileWithDirs(filePath string) (*os.File, error) {
 	// 取出目录部分
 	dir := filepath.Dir(filePath)
@@ -72,6 +82,7 @@ func CreateFileWithDirs(filePath string) (*os.File, error) {
 	return f, nil
 }
 
+// 下载html文件到本地
 func (*File) HTMLDownload(uri string) string {
 	// 解析文件链接及 路径
 	u, err := url.Parse(uri)
@@ -114,4 +125,29 @@ func (*File) HTMLDownload(uri string) string {
 	}
 	fmt.Println("下载完成:", fp)
 	return fp
+}
+
+// 获取文件夹列表
+func (*File) GetFileDirList(filePath string) []FileDir {
+	var fileList []FileDir
+	entries, err := os.ReadDir(filePath)
+	if err != nil {
+		return nil
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			info, err := entry.Info()
+			if err != nil {
+				fmt.Println("无法获取属性:", err)
+				continue
+			}
+			fileList = append(fileList, FileDir{
+				Name:    entry.Name(),
+				Size:    info.Size(),
+				Mode:    info.Mode().String(),
+				ModTime: info.ModTime(),
+			})
+		}
+	}
+	return fileList
 }
