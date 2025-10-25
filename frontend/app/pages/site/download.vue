@@ -1,4 +1,8 @@
 <template>
+   <a-breadcrumb style="margin: 10px 0">
+      <a-breadcrumb-item>仿站</a-breadcrumb-item>
+      <a-breadcrumb-item>整站下载</a-breadcrumb-item>
+    </a-breadcrumb>
   <div class="google-search-page">
     <!-- 背景装饰元素 -->
     <div class="background-elements">
@@ -113,7 +117,7 @@
                     </template>
                   </a-list-item-meta>
                   <div class="result-content">
-                    <div class="result-snippet">可下载：{{ searchResults?.dom.length }}</div>
+                    <div class="result-snippet"><div style="margin-right: 10px;">可下载：{{ searchResults?.dom.length }}</div><a-progress v-if="isDownload&&searchResults?.dom.length>0" :percent="domDownloadProgress" status="active" /></div>
                   </div>
                 </a-list-item>
 
@@ -125,7 +129,7 @@
                   </a-list-item-meta>
                   <div class="result-content">
                     <div class="result-snippet">总数：{{ searchResults?.image.length }}</div>
-                    <div class="result-snippet">本站资源：{{ resourceData?.imageD.length }}</div>
+                    <div class="result-snippet"><div style="margin-right: 10px;">本站资源：{{ resourceData?.imageD.length }}</div> <a-progress v-if="isDownload&&resourceData?.imageD.length>0" :percent="imageDownloadProgress" status="active" /></div>
                     <div class="result-snippet">其他资源：{{ resourceData?.image.length }}</div>
                   </div>
                 </a-list-item>
@@ -137,7 +141,7 @@
                   </a-list-item-meta>
                   <div class="result-content">
                     <div class="result-snippet">总数：{{ searchResults?.css.length }}</div>
-                    <div class="result-snippet">本站资源：{{ resourceData?.cssD.length }}</div>
+                    <div class="result-snippet"><div style="margin-right: 10px;">本站资源：{{ resourceData?.cssD.length }}</div> <a-progress v-if="isDownload&&resourceData?.cssD.length>0" :percent="cssDownloadProgress" status="active" /></div>
                     <div class="result-snippet">其他资源：{{ resourceData?.css.length }}</div>
                   </div>
                 </a-list-item>
@@ -149,7 +153,7 @@
                   </a-list-item-meta>
                   <div class="result-content">
                     <div class="result-snippet">总数：{{ searchResults?.script.length }}</div>
-                    <div class="result-snippet">本站资源：{{ resourceData?.scriptD.length }}</div>
+                    <div class="result-snippet"><div style="margin-right: 10px;">本站资源：{{ resourceData?.scriptD.length }}</div> <a-progress v-if="isDownload&&resourceData?.scriptD.length>0" :percent="scriptDownloadProgress" status="active" /></div>
                     <div class="result-snippet">其他资源：{{ resourceData?.script.length }}</div>
                   </div>
                 </a-list-item>
@@ -161,7 +165,7 @@
                   </a-list-item-meta>
                   <div class="result-content">
                     <div class="result-snippet">总数：{{ searchResults?.video.length }}</div>
-                    <div class="result-snippet">本站资源：{{ resourceData?.videoD.length }}</div>
+                    <div class="result-snippet"><div style="margin-right: 10px;">本站资源：{{ resourceData?.videoD.length }}</div> <a-progress v-if="isDownload&&resourceData?.videoD.length>0" :percent="videoDownloadProgress" status="active" /></div>
                     <div class="result-snippet">其他资源：{{ resourceData?.video.length }}</div>
                   </div>
                 </a-list-item>
@@ -195,11 +199,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+// import { ref, onMounted, nextTick } from 'vue'
 import { SearchOutlined, SettingOutlined, MenuOutlined } from '@ant-design/icons-vue'
 import {App} from "../../../bindings/go-site-clone";
 const { $message } = useNuxtApp();
 const [messageApi, contextHolder] = $message.useMessage();
+import { Events } from '@wailsio/runtime'
 // 搜索状态
 const searchKeyword = ref('')
 const hasSearched = ref(false)
@@ -208,6 +213,13 @@ const searchTime = ref(0)
 const searchInputRef = ref()
 const isInputFocused = ref(false)
 const filterType = ref('all')
+// 下载进度
+const domDownloadProgress = ref(0);
+const cssDownloadProgress = ref(0);
+const scriptDownloadProgress = ref(0);
+const imageDownloadProgress = ref(0);
+const videoDownloadProgress = ref(0);
+const isDownload = ref(false)
 
 // 分页配置
 const paginationConfig = {
@@ -256,7 +268,11 @@ const isValidURL = (str) => { try { new URL(str); return true; } catch { return 
 
 // 下载当前页面资源
 const downloadResource = async ()=> {
-  App.DownloadSite(searchResults.value)
+  if(!isDownload.value) {
+    isDownload.value=true
+    await App.DownloadSite(searchKeyword.value.trim(), searchResults.value)
+  }
+  
 }
 
 // 搜索处理函数
@@ -274,7 +290,7 @@ const handleSearch = async () => {
   }
   searchLoading.value = true
   const startTime = Date.now()
-  
+  isDownload.value = false
   nextTick(() => {
     setTimeout(() => {
       searchInputRef.value?.focus()
@@ -362,12 +378,39 @@ onMounted(() => {
   nextTick(() => {
     searchInputRef.value?.focus()
   })
+  Events.On("download:css", (event)=> {
+    if(resourceData.value.cssD.length > 0) {
+      cssDownloadProgress.value = Math.ceil((event.data[0]+1)/searchResults.value.css.length)
+    }
+  })
+  Events.On("download:script", (event)=> {
+    if(resourceData.value.scriptD.length > 0) {
+      scriptDownloadProgress.value = Math.ceil((event.data[0]+1)/searchResults.value.script.length)
+    }
+  })
+  Events.On("download:image", (event)=> {
+    if(resourceData.value.imageD.length > 0) {
+      imageDownloadProgress.value = Math.ceil((event.data[0]+1)/searchResults.value.image.length)
+    }
+  })
+  Events.On("download:video", (event)=> {
+    console.log("download:video", event);
+    if(resourceData.value.videoD.length > 0) {
+      videoDownloadProgress.value = Math.ceil((event.data[0]+1)/searchResults.value.video.length)
+    }
+  })
+  Events.On("download:dom", (event)=> {
+    console.log("download:dom", event);
+    if(searchResults.value.dom.length > 0) {
+      domDownloadProgress.value = Math.ceil((event.data[0]+1)/searchResults.value.dom.length)
+    }
+  })
 })
 </script>
 
 <style scoped>
 .google-search-page {
-  min-height: 100vh;
+  min-height: calc(-155px + 100vh);;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   position: relative;
   overflow-x: hidden;
@@ -418,7 +461,7 @@ onMounted(() => {
 .main-content {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
+  min-height: calc(100vh - 155px);
   display: flex;
   flex-direction: column;
 }
@@ -751,6 +794,8 @@ onMounted(() => {
   color: #4d5156;
   line-height: 1.6;
   margin: 0.5rem 0;
+  display: flex;
+  white-space: nowrap;
 }
 
 .result-meta {
