@@ -41,6 +41,15 @@ export function GetResources(rawURL) {
     }));
 }
 
+/**
+ * 打开网站文件夹
+ * @param {string} pathDir
+ * @returns {$CancellablePromise<boolean>}
+ */
+export function OpenSiteFileDir(pathDir) {
+    return $Call.ByID(4158138211, pathDir);
+}
+
 // Private type creation functions
 const $$createType0 = utils$0.FileDir.createFrom;
 const $$createType1 = $Create.Array($$createType0);

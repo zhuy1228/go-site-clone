@@ -5,7 +5,15 @@
   </a-breadcrumb>
   <div>
     <a-card :bordered="false" class="table-list">
-      <a-table :dataSource="dataSource" :columns="columns" />
+      <a-table :dataSource="dataSource" :columns="columns" >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'action'">
+            <span>
+              <a @click="openFileDir(record.name)">查看文件</a>
+            </span>
+          </template>
+        </template>
+      </a-table>
     </a-card>
   </div>
 </template>
@@ -40,10 +48,15 @@
 
   const dataSource = ref([]);
   const siteList = ref([])
+  // 获取网站列表
   const getList = async ()=> {
     App.GetDownloadList().then((res)=>{   
       dataSource.value = JSON.parse(JSON.stringify(res))
     })
+  }
+  // 打开文件夹
+  const openFileDir = async (name) => {
+    App.OpenSiteFileDir(name)
   }
   onMounted(()=> {
     getList()

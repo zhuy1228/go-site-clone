@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"go-site-clone/config"
 	"go-site-clone/services"
 	"go-site-clone/utils"
 	"net/url"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -106,4 +110,17 @@ func (a *App) DownloadSite(uri string, obj services.ResourcesList) bool {
 
 func (a *App) GetDownloadList() []utils.FileDir {
 	return siteService.GetLocalSiteList()
+}
+
+// 打开网站文件夹
+func (a *App) OpenSiteFileDir(pathDir string) bool {
+	appConfig, _ := config.LoadConfig()
+	newPath := filepath.Join(appConfig.SiteFileDir, pathDir)
+	cmd := exec.Command("explorer", newPath)
+	err := cmd.Start()
+	if err != nil {
+		fmt.Println("打开文件夹失败:", err)
+		return false
+	}
+	return true
 }
