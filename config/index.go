@@ -7,12 +7,10 @@ import (
 )
 
 type AppConfig struct {
-	Port        int    `yaml:"port"`
-	WsUrl       string `yaml:"wsUrl"`
-	StunUrl     string `yaml:"stunUrl"`
-	ApiUrl      string `yaml:"apiUrl"`
-	AppName     string `yaml:"appName"`
-	SiteFileDir string `yaml:"siteFileDir"`
+	Port            int    `yaml:"port"`
+	AppName         string `yaml:"appName"`
+	SiteFileDir     string `yaml:"siteFileDir"`
+	PackSiteFileDir string `yaml:"packSiteFileDir"`
 }
 
 func LoadConfig() (*AppConfig, error) {

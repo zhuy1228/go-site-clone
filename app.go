@@ -6,6 +6,7 @@ import (
 	"go-site-clone/services"
 	"go-site-clone/utils"
 	"net/url"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -120,6 +121,17 @@ func (a *App) OpenSiteFileDir(pathDir string) bool {
 	err := cmd.Start()
 	if err != nil {
 		fmt.Println("打开文件夹失败:", err)
+		return false
+	}
+	return true
+}
+
+func (a *App) DeleteSiteFileDir(pathDir string) bool {
+	appConfig, _ := config.LoadConfig()
+	newPath := filepath.Join(appConfig.SiteFileDir, pathDir)
+	err := os.RemoveAll(newPath)
+	if err != nil {
+		fmt.Println("删除文件夹失败:", err)
 		return false
 	}
 	return true

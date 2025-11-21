@@ -14,6 +14,14 @@ import * as services$0 from "./services/models.js";
 import * as utils$0 from "./utils/models.js";
 
 /**
+ * @param {string} pathDir
+ * @returns {$CancellablePromise<boolean>}
+ */
+export function DeleteSiteFileDir(pathDir) {
+    return $Call.ByID(2647643782, pathDir);
+}
+
+/**
  * @param {string} uri
  * @param {services$0.ResourcesList} obj
  * @returns {$CancellablePromise<boolean>}
