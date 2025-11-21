@@ -73,6 +73,15 @@
               <span>打包应用</span>
             </a-menu-item>
           </a-menu-item-group>
+
+          <a-menu-divider class="menu-divider" />
+
+          <a-menu-item key="settings" class="menu-item">
+            <template #icon>
+              <setting-outlined class="menu-icon" />
+            </template>
+            <span>系统设置</span>
+          </a-menu-item>
         </a-menu>
 
         <!-- 底部信息 -->
@@ -109,7 +118,8 @@ import {
   CloudServerOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  ApiOutlined
+  ApiOutlined,
+  SettingOutlined
 } from '@ant-design/icons-vue';
 import { ref, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';

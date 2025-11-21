@@ -562,7 +562,7 @@ onMounted(() => {
 <style scoped>
 /* 页面布局 */
 .download-page {
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 120px);
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   position: relative;
   overflow: hidden;
