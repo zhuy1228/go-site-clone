@@ -129,8 +129,8 @@
           v-else
           :columns="columns" 
           :data-source="hostingSites"
-          :pagination="{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `共 ${total} 个站点` }"
-          :scroll="{ x: 800 }"
+          :pagination="{ pageSize: 10, showSizeChanger: true, showTotal: (total: number) => `共 ${total} 个站点` }"
+          :scroll="{ x: 1050 }"
           class="hosting-table"
         >
           <template #bodyCell="{ column, record }">
@@ -251,8 +251,12 @@
           </a-col>
         </a-row>
 
-        <a-form-item label="网站路径" name="path">
-          <a-input v-model:value="formData.path" disabled />
+        <a-form-item label="网站路径" name="path" :rules="[{ required: true, message: '请输入网站路径' }]">
+          <a-input v-model:value="formData.path" placeholder="相对路径，如: www/example.com" />
+          <div class="form-tip">
+            <info-circle-outlined />
+            <span>相对于项目根目录的路径</span>
+          </div>
         </a-form-item>
 
         <a-form-item label="启用状态">
@@ -309,7 +313,7 @@ const formRef = ref();
 const formData = ref({
   name: '',
   domains: ['127.0.0.1'],
-  port: 80,
+  port: 8080,
   path: '',
   index: 'index.html',
   enabled: true
@@ -320,29 +324,31 @@ const columns = [
   {
     title: '网站',
     key: 'site',
-    width: '25%',
+    width: 280,
+    ellipsis: true,
   },
   {
     title: '域名',
     key: 'domain',
-    width: '25%',
+    width: 250,
+    ellipsis: true,
   },
   {
     title: '端口',
     key: 'port',
-    width: '10%',
+    width: 100,
     align: 'center',
   },
   {
     title: '状态',
     key: 'status',
-    width: '10%',
+    width: 100,
     align: 'center',
   },
   {
     title: '操作',
     key: 'action',
-    width: '30%',
+    width: 320,
     align: 'center',
     fixed: 'right',
   },
@@ -357,8 +363,20 @@ onMounted(() => {
 const loadData = async () => {
   await Promise.all([
     getAvailableSites(),
-    getHostingSites()
+    getHostingSites(),
+    checkNginxStatus()
   ]);
+};
+
+const checkNginxStatus = async () => {
+  try {
+    const status = await App.CheckNginxStatus();
+    nginxRunning.value = status;
+    console.log("Nginx running status:", status);
+    
+  } catch (error) {
+    console.error('获取 Nginx 状态失败:', error);
+  }
 };
 
 // 获取可用网站列表(已下载的)
@@ -375,19 +393,8 @@ const getAvailableSites = async () => {
 const getHostingSites = async () => {
   loading.value = true;
   try {
-    // TODO: 调用后端接口获取托管列表
-    // 暂时使用模拟数据
-    hostingSites.value = [
-      {
-        id: '1',
-        name: 'example.com',
-        path: '/www/example.com',
-        domains: ['example.com', '127.0.0.1'],
-        port: 80,
-        index: 'index.html',
-        enabled: true,
-      },
-    ];
+    const sites = await App.GetAllNginxSites();
+    hostingSites.value = sites || [];
   } catch (error) {
     console.error('获取托管列表失败:', error);
     message.error('获取托管列表失败');
@@ -408,13 +415,13 @@ const toggleNginx = async () => {
   try {
     if (nginxRunning.value) {
       // TODO: 调用后端接口停止 Nginx
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await App.StopNginx();
       nginxRunning.value = false;
       uptime.value = '--';
       message.success('Nginx 已停止');
     } else {
       // TODO: 调用后端接口启动 Nginx
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await App.StartNginx();
       nginxRunning.value = true;
       uptime.value = '00:00:00';
       message.success('Nginx 已启动');
@@ -432,7 +439,7 @@ const showAddModal = () => {
   formData.value = {
     name: '',
     domains: ['127.0.0.1'],
-    port: 80,
+    port: 8080,
     path: '',
     index: 'index.html',
     enabled: true
@@ -451,8 +458,9 @@ const editSite = (record: any) => {
 const onSiteSelect = (value: string) => {
   const site = availableSites.value.find(s => s.name === value);
   if (site) {
-    formData.value.path = `/www/${value}`;
-    formData.value.domains = [value];
+    // 设置网站路径（从工作目录）
+    formData.value.path = `www/${value}`;
+    formData.value.domains = [value, '127.0.0.1'];
   }
 };
 
@@ -462,24 +470,44 @@ const handleModalOk = async () => {
     await formRef.value?.validate();
     
     if (editingRecord.value) {
-      // 更新
-      const index = hostingSites.value.findIndex(s => s.id === editingRecord.value.id);
-      if (index !== -1) {
-        hostingSites.value[index] = { ...formData.value, id: editingRecord.value.id };
-      }
+      // 更新站点配置
+      await App.UpdateNginxSite({
+        ID: "",
+        Name: formData.value.name,
+        Domains: formData.value.domains,
+        Port: formData.value.port,
+        Path: formData.value.path,
+        Index: formData.value.index,
+        Enabled: formData.value.enabled
+      });
       message.success('更新成功');
     } else {
-      // 添加
-      hostingSites.value.push({
-        ...formData.value,
-        id: Date.now().toString()
+      // 添加站点配置
+      await App.AddNginxSite({
+        ID: "",
+        Name: formData.value.name,
+        Domains: formData.value.domains,
+        Port: formData.value.port,
+        Path: formData.value.path,
+        Index: formData.value.index,
+        Enabled: formData.value.enabled
       });
-      message.success('添加成功');
+      message.success('站点配置创建成功');
+    }
+    
+    // 重新加载站点列表
+    await getHostingSites();
+    
+    // 如果 nginx 正在运行，重载配置
+    if (nginxRunning.value) {
+      await App.ReloadNginx();
+      message.info('Nginx 配置已重载');
     }
     
     modalVisible.value = false;
-  } catch (error) {
-    console.error('验证失败:', error);
+  } catch (error: any) {
+    console.error('操作失败:', error);
+    message.error(error.message || '操作失败');
   }
 };
 
@@ -489,16 +517,44 @@ const handleModalCancel = () => {
 };
 
 // 切换站点状态
-const toggleSiteStatus = (record: any) => {
-  message.success(record.enabled ? '已启用' : '已禁用');
+const toggleSiteStatus = async (record: any) => {
+  try {
+    if (record.enabled) {
+      await App.EnableNginxSite(record.name);
+      message.success('站点已启用');
+    } else {
+      await App.DisableNginxSite(record.name);
+      message.success('站点已禁用');
+    }
+    
+    // 如果 nginx 正在运行，重载配置
+    if (nginxRunning.value) {
+      await App.ReloadNginx();
+    }
+  } catch (error: any) {
+    console.error('切换状态失败:', error);
+    message.error(error.message || '操作失败');
+    // 回滚状态
+    record.enabled = !record.enabled;
+  }
 };
 
 // 删除站点
-const deleteSite = (record: any) => {
-  const index = hostingSites.value.findIndex(s => s.id === record.id);
-  if (index !== -1) {
-    hostingSites.value.splice(index, 1);
-    message.success('删除成功');
+const deleteSite = async (record: any) => {
+  try {
+    await App.DeleteNginxSite(record.name);
+    message.success('站点配置已删除');
+    
+    // 重新加载站点列表
+    await getHostingSites();
+    
+    // 如果 nginx 正在运行，重载配置
+    if (nginxRunning.value) {
+      await App.ReloadNginx();
+    }
+  } catch (error: any) {
+    console.error('删除失败:', error);
+    message.error(error.message || '删除失败');
   }
 };
 
@@ -727,6 +783,7 @@ const getAvatarColor = (name: string) => {
   font-weight: 600;
   color: #333;
   border-bottom: 2px solid #1890ff;
+  padding: 16px;
 }
 
 :deep(.hosting-table .ant-table-tbody > tr) {
@@ -737,15 +794,22 @@ const getAvatarColor = (name: string) => {
   background: #e6f7ff !important;
 }
 
+:deep(.hosting-table .ant-table-tbody > tr > td) {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
 .site-cell {
   display: flex;
   align-items: center;
   gap: 12px;
+  max-width: 100%;
 }
 
 .site-details {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .site-name {
@@ -753,6 +817,10 @@ const getAvatarColor = (name: string) => {
   font-weight: 600;
   color: #333;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .site-path {
@@ -761,12 +829,22 @@ const getAvatarColor = (name: string) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .domain-cell {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.domain-cell :deep(.ant-tag) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 加载和空状态 */

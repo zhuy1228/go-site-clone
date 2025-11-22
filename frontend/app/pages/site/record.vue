@@ -61,7 +61,7 @@
           :columns="columns"
           :loading="loading"
           :pagination="paginationConfig"
-          :scroll="{ x: 800 }"
+          :scroll="{ x: 950 }"
           class="custom-table"
         >
           <template #bodyCell="{ column, record, index }">
@@ -167,33 +167,33 @@ const columns = [
     title: '站点名称',
     dataIndex: 'name',
     key: 'name',
-    width: '35%',
+    width: 300,
     ellipsis: true,
   },
   {
     title: '文件大小',
     dataIndex: 'size',
     key: 'size',
-    width: '15%',
+    width: 130,
     sorter: (a, b) => a.size - b.size,
   },
   {
     title: '权限',
     dataIndex: 'mode',
     key: 'mode',
-    width: '15%',
+    width: 120,
   },
   {
     title: '最后修改时间',
     key: 'modTime',
     dataIndex: 'modTime',
-    width: '20%',
+    width: 180,
     sorter: (a, b) => new Date(a.modTime) - new Date(b.modTime),
   },
   {
     title: '操作',
     key: 'action',
-    width: '15%',
+    width: 220,
     fixed: 'right',
   },
 ]
@@ -455,6 +455,11 @@ onMounted(() => {
   animation: fadeInUp 0.6s ease-out 0.2s both;
 }
 
+:deep(.table-card .ant-card-body) {
+  padding: 0;
+  overflow: hidden;
+}
+
 :deep(.table-card .ant-card-head) {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-bottom: 2px solid #f0f0f0;
@@ -505,6 +510,9 @@ onMounted(() => {
 :deep(.custom-table .ant-table-tbody > tr > td) {
   padding: 16px;
   border-bottom: 1px solid #f0f0f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 名称单元格 */
@@ -512,11 +520,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+  max-width: 100%;
 }
 
 .name-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .site-name {
@@ -527,6 +537,7 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .site-path {
@@ -535,6 +546,7 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* 大小标签 */

@@ -11,9 +11,86 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as services$0 from "./services/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as storage$0 from "./storage/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as types$0 from "./types/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as utils$0 from "./utils/models.js";
 
 /**
+ * AddDownloadRecord 添加下载记录
+ * @param {storage$0.DownloadRecord} record
+ * @returns {$CancellablePromise<void>}
+ */
+export function AddDownloadRecord(record) {
+    return $Call.ByID(357560545, record);
+}
+
+/**
+ * 添加站点配置
+ * @param {types$0.NginxSiteConfig} site
+ * @returns {$CancellablePromise<void>}
+ */
+export function AddNginxSite(site) {
+    return $Call.ByID(950690035, site);
+}
+
+/**
+ * BackupDatabase 备份数据库
+ * @param {string} backupPath
+ * @returns {$CancellablePromise<void>}
+ */
+export function BackupDatabase(backupPath) {
+    return $Call.ByID(2830093186, backupPath);
+}
+
+/**
+ * 检查 Nginx 状态
+ * @returns {$CancellablePromise<boolean>}
+ */
+export function CheckNginxStatus() {
+    return $Call.ByID(2402834819);
+}
+
+/**
+ * 清空 Nginx 日志
+ * @returns {$CancellablePromise<void>}
+ */
+export function ClearNginxLogs() {
+    return $Call.ByID(3579671429);
+}
+
+/**
+ * ClearOldDownloadRecords 清理旧的下载记录
+ * @param {number} days
+ * @returns {$CancellablePromise<number>}
+ */
+export function ClearOldDownloadRecords(days) {
+    return $Call.ByID(84469747, days);
+}
+
+/**
+ * DeleteDownloadRecord 删除下载记录
+ * @param {string} id
+ * @returns {$CancellablePromise<void>}
+ */
+export function DeleteDownloadRecord(id) {
+    return $Call.ByID(1013800695, id);
+}
+
+/**
+ * 删除站点配置
+ * @param {string} siteName
+ * @returns {$CancellablePromise<void>}
+ */
+export function DeleteNginxSite(siteName) {
+    return $Call.ByID(86965973, siteName);
+}
+
+/**
+ * 删除网站文件夹
  * @param {string} pathDir
  * @returns {$CancellablePromise<boolean>}
  */
@@ -22,6 +99,16 @@ export function DeleteSiteFileDir(pathDir) {
 }
 
 /**
+ * 禁用站点
+ * @param {string} siteName
+ * @returns {$CancellablePromise<void>}
+ */
+export function DisableNginxSite(siteName) {
+    return $Call.ByID(3342681398, siteName);
+}
+
+/**
+ * 下载网站资源
  * @param {string} uri
  * @param {services$0.ResourcesList} obj
  * @returns {$CancellablePromise<boolean>}
@@ -31,22 +118,115 @@ export function DownloadSite(uri, obj) {
 }
 
 /**
- * @returns {$CancellablePromise<utils$0.FileDir[]>}
+ * 启用站点
+ * @param {string} siteName
+ * @returns {$CancellablePromise<void>}
  */
-export function GetDownloadList() {
-    return $Call.ByID(2717901443).then(/** @type {($result: any) => any} */(($result) => {
+export function EnableNginxSite(siteName) {
+    return $Call.ByID(2112827609, siteName);
+}
+
+/**
+ * GetAllDownloadRecords 获取所有下载记录
+ * @returns {$CancellablePromise<storage$0.DownloadRecord[]>}
+ */
+export function GetAllDownloadRecords() {
+    return $Call.ByID(1915535268).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType1($result);
     }));
 }
 
 /**
+ * 获取所有站点配置
+ * @returns {$CancellablePromise<types$0.NginxSiteConfig[]>}
+ */
+export function GetAllNginxSites() {
+    return $Call.ByID(3317211258).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType3($result);
+    }));
+}
+
+/**
+ * 获取本地已下载网站列表
+ * @returns {$CancellablePromise<utils$0.FileDir[]>}
+ */
+export function GetDownloadList() {
+    return $Call.ByID(2717901443).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType5($result);
+    }));
+}
+
+/**
+ * GetDownloadStats 获取下载统计
+ * @returns {$CancellablePromise<{ [_: string]: any }>}
+ */
+export function GetDownloadStats() {
+    return $Call.ByID(180408518).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType6($result);
+    }));
+}
+
+/**
+ * 获取 Nginx 访问日志
+ * @param {number} lines
+ * @returns {$CancellablePromise<string[]>}
+ */
+export function GetNginxAccessLog(lines) {
+    return $Call.ByID(3967804239, lines).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType7($result);
+    }));
+}
+
+/**
+ * 获取 Nginx 错误日志
+ * @param {number} lines
+ * @returns {$CancellablePromise<string[]>}
+ */
+export function GetNginxErrorLog(lines) {
+    return $Call.ByID(3102869025, lines).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType7($result);
+    }));
+}
+
+/**
+ * GetRecentDownloadRecords 获取最近的下载记录
+ * @param {number} limit
+ * @returns {$CancellablePromise<storage$0.DownloadRecord[]>}
+ */
+export function GetRecentDownloadRecords(limit) {
+    return $Call.ByID(361708134, limit).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType1($result);
+    }));
+}
+
+/**
+ * 		return nil
+ * 	}
+ * 
+ * ========== 网站克隆相关方法 ==========
  * @param {string} rawURL
  * @returns {$CancellablePromise<services$0.ResourcesList | null>}
  */
 export function GetResources(rawURL) {
     return $Call.ByID(2167352808, rawURL).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType9($result);
     }));
+}
+
+/**
+ * 服务关闭时不关闭 nginx，但关闭数据库
+ * @returns {$CancellablePromise<void>}
+ */
+export function OnShutdown() {
+    return $Call.ByID(999779538);
+}
+
+/**
+ * 服务启动时初始化 nginx 服务和数据库
+ * @returns {$CancellablePromise<void>}
+ */
+export function OnStartup() {
+    return $Call.ByID(2232168041);
 }
 
 /**
@@ -58,8 +238,63 @@ export function OpenSiteFileDir(pathDir) {
     return $Call.ByID(4158138211, pathDir);
 }
 
+/**
+ * 重载 Nginx 配置
+ * @returns {$CancellablePromise<void>}
+ */
+export function ReloadNginx() {
+    return $Call.ByID(412894400);
+}
+
+/**
+ * 重启 Nginx
+ * @returns {$CancellablePromise<void>}
+ */
+export function RestartNginx() {
+    return $Call.ByID(2491282768);
+}
+
+/**
+ * 启动 Nginx
+ * @returns {$CancellablePromise<void>}
+ */
+export function StartNginx() {
+    return $Call.ByID(1903679817);
+}
+
+/**
+ * 停止 Nginx
+ * @returns {$CancellablePromise<void>}
+ */
+export function StopNginx() {
+    return $Call.ByID(1067982487);
+}
+
+/**
+ * 测试 Nginx 配置
+ * @returns {$CancellablePromise<void>}
+ */
+export function TestNginxConfig() {
+    return $Call.ByID(222716517);
+}
+
+/**
+ * 更新站点配置
+ * @param {types$0.NginxSiteConfig} site
+ * @returns {$CancellablePromise<void>}
+ */
+export function UpdateNginxSite(site) {
+    return $Call.ByID(2978221891, site);
+}
+
 // Private type creation functions
-const $$createType0 = utils$0.FileDir.createFrom;
+const $$createType0 = storage$0.DownloadRecord.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = services$0.ResourcesList.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
+const $$createType2 = types$0.NginxSiteConfig.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = utils$0.FileDir.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $Create.Map($Create.Any, $Create.Any);
+const $$createType7 = $Create.Array($Create.Any);
+const $$createType8 = services$0.ResourcesList.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
