@@ -8,6 +8,7 @@ require (
 	github.com/go-rod/stealth v0.4.9
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.27
+	go.etcd.io/bbolt v1.4.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 
