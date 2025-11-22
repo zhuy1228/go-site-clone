@@ -47,6 +47,16 @@ export function BackupDatabase(backupPath) {
 }
 
 /**
+ * CheckEnvironment 检查Go和Wails环境
+ * @returns {$CancellablePromise<utils$0.EnvStatus | null>}
+ */
+export function CheckEnvironment() {
+    return $Call.ByID(659287976).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType1($result);
+    }));
+}
+
+/**
  * 检查 Nginx 状态
  * @returns {$CancellablePromise<boolean>}
  */
@@ -132,7 +142,7 @@ export function EnableNginxSite(siteName) {
  */
 export function GetAllDownloadRecords() {
     return $Call.ByID(1915535268).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
 }
 
@@ -142,7 +152,7 @@ export function GetAllDownloadRecords() {
  */
 export function GetAllNginxSites() {
     return $Call.ByID(3317211258).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType5($result);
     }));
 }
 
@@ -152,7 +162,7 @@ export function GetAllNginxSites() {
  */
 export function GetDownloadList() {
     return $Call.ByID(2717901443).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType5($result);
+        return $$createType7($result);
     }));
 }
 
@@ -162,7 +172,7 @@ export function GetDownloadList() {
  */
 export function GetDownloadStats() {
     return $Call.ByID(180408518).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType6($result);
+        return $$createType8($result);
     }));
 }
 
@@ -173,7 +183,7 @@ export function GetDownloadStats() {
  */
 export function GetNginxAccessLog(lines) {
     return $Call.ByID(3967804239, lines).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType9($result);
     }));
 }
 
@@ -184,7 +194,7 @@ export function GetNginxAccessLog(lines) {
  */
 export function GetNginxErrorLog(lines) {
     return $Call.ByID(3102869025, lines).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType9($result);
     }));
 }
 
@@ -195,7 +205,7 @@ export function GetNginxErrorLog(lines) {
  */
 export function GetRecentDownloadRecords(limit) {
     return $Call.ByID(361708134, limit).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
 }
 
@@ -209,8 +219,25 @@ export function GetRecentDownloadRecords(limit) {
  */
 export function GetResources(rawURL) {
     return $Call.ByID(2167352808, rawURL).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
+        return $$createType11($result);
     }));
+}
+
+/**
+ * InstallGo 安装Go环境
+ * @param {string} version
+ * @returns {$CancellablePromise<void>}
+ */
+export function InstallGo(version) {
+    return $Call.ByID(3092774982, version);
+}
+
+/**
+ * InstallWails 安装Wails3环境
+ * @returns {$CancellablePromise<void>}
+ */
+export function InstallWails() {
+    return $Call.ByID(2801156166);
 }
 
 /**
@@ -236,6 +263,15 @@ export function OnStartup() {
  */
 export function OpenSiteFileDir(pathDir) {
     return $Call.ByID(4158138211, pathDir);
+}
+
+/**
+ * PackApp 打包应用
+ * @param {{ [_: string]: any }} packConfig
+ * @returns {$CancellablePromise<void>}
+ */
+export function PackApp(packConfig) {
+    return $Call.ByID(513531507, packConfig);
 }
 
 /**
@@ -296,13 +332,15 @@ export function UpdateNginxSite(site) {
 }
 
 // Private type creation functions
-const $$createType0 = storage$0.DownloadRecord.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = types$0.NginxSiteConfig.createFrom;
+const $$createType0 = utils$0.EnvStatus.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = storage$0.DownloadRecord.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = utils$0.FileDir.createFrom;
+const $$createType4 = types$0.NginxSiteConfig.createFrom;
 const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $Create.Map($Create.Any, $Create.Any);
-const $$createType7 = $Create.Array($Create.Any);
-const $$createType8 = services$0.ResourcesList.createFrom;
-const $$createType9 = $Create.Nullable($$createType8);
+const $$createType6 = utils$0.FileDir.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $Create.Map($Create.Any, $Create.Any);
+const $$createType9 = $Create.Array($Create.Any);
+const $$createType10 = services$0.ResourcesList.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);

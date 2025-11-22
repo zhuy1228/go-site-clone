@@ -22,6 +22,129 @@
         </div>
       </div>
 
+      <!-- 环境检查卡片 -->
+      <a-card class="env-card" :bordered="false">
+        <template #title>
+          <div class="card-title-wrapper">
+            <tool-outlined class="title-icon" />
+            <span>开发环境检查</span>
+            <a-button type="link" size="small" @click="checkEnv" :loading="envChecking">
+              <template #icon><reload-outlined /></template>
+              刷新
+            </a-button>
+          </div>
+        </template>
+        
+        <a-row :gutter="24">
+          <a-col :xs="24" :md="12">
+            <div class="env-item">
+              <div class="env-header">
+                <div class="env-title">
+                  <code-outlined class="env-icon go-icon" />
+                  <span class="env-name">Go 环境</span>
+                </div>
+                <a-tag :color="envStatus.hasGo ? 'success' : 'default'">
+                  {{ envStatus.hasGo ? '已安装' : '未安装' }}
+                </a-tag>
+              </div>
+              <div class="env-info" v-if="envStatus.hasGo">
+                <div class="info-row">
+                  <span class="label">版本:</span>
+                  <span class="value">{{ envStatus.goVersion }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">路径:</span>
+                  <span class="value path">{{ envStatus.goPath }}</span>
+                </div>
+              </div>
+              <div class="env-actions" v-if="!envStatus.hasGo">
+                <a-button 
+                  type="primary" 
+                  @click="showInstallGoModal"
+                  :loading="goInstalling"
+                >
+                  <template #icon><download-outlined /></template>
+                  安装 Go
+                </a-button>
+              </div>
+            </div>
+          </a-col>
+
+          <a-col :xs="24" :md="12">
+            <div class="env-item">
+              <div class="env-header">
+                <div class="env-title">
+                  <code-outlined class="env-icon wails-icon" />
+                  <span class="env-name">Wails3 环境</span>
+                </div>
+                <a-tag :color="envStatus.hasWails ? 'success' : 'default'">
+                  {{ envStatus.hasWails ? '已安装' : '未安装' }}
+                </a-tag>
+              </div>
+              <div class="env-info" v-if="envStatus.hasWails">
+                <div class="info-row">
+                  <span class="label">版本:</span>
+                  <span class="value">{{ envStatus.wailsVersion }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">路径:</span>
+                  <span class="value path">{{ envStatus.wailsPath }}</span>
+                </div>
+              </div>
+              <div class="env-actions" v-if="!envStatus.hasWails">
+                <a-button 
+                  type="primary" 
+                  @click="installWails"
+                  :loading="wailsInstalling"
+                  :disabled="!envStatus.hasGo"
+                >
+                  <template #icon><download-outlined /></template>
+                  安装 Wails3
+                </a-button>
+                <p class="hint-text" v-if="!envStatus.hasGo">请先安装 Go 环境</p>
+              </div>
+            </div>
+          </a-col>
+        </a-row>
+
+        <a-alert 
+          v-if="!envStatus.hasGo || !envStatus.hasWails"
+          type="warning" 
+          message="环境检查"
+          :description="getEnvWarning()"
+          show-icon
+          style="margin-top: 16px;"
+        />
+      </a-card>
+
+      <!-- 安装Go对话框 -->
+      <a-modal
+        v-model:open="installGoModalVisible"
+        title="安装 Go 环境"
+        @ok="installGo"
+        @cancel="installGoModalVisible = false"
+        :confirm-loading="goInstalling"
+      >
+        <a-form layout="vertical">
+          <a-form-item label="Go 版本">
+            <a-input 
+              v-model:value="goVersionToInstall" 
+              placeholder="1.25.3"
+            />
+            <div class="form-tip" style="margin-top: 8px;">
+              <info-circle-outlined />
+              <span>默认安装到 plugin/go/ 目录</span>
+            </div>
+          </a-form-item>
+        </a-form>
+        <a-alert
+          message="安装说明"
+          description="安装过程可能需要几分钟,请耐心等待。安装脚本会自动下载并解压 Go 到本地目录。"
+          type="info"
+          show-icon
+        />
+      </a-modal>
+
       <!-- 打包向导 -->
       <a-card class="wizard-card" :bordered="false">
         <a-steps :current="currentStep" class="pack-steps">
@@ -37,11 +160,38 @@
           <div v-if="currentStep === 0" class="step-panel">
             <div class="step-header">
               <h3 class="step-title">选择要打包的网站</h3>
-              <a-button @click="getDownloadList" :loading="loading" size="small">
-                <template #icon><reload-outlined /></template>
-                刷新列表
-              </a-button>
+              <a-space>
+                <a-button @click="selectSiteFolder" size="small">
+                  <template #icon><folder-open-outlined /></template>
+                  选择文件夹
+                </a-button>
+                <a-button @click="getDownloadList" :loading="loading" size="small">
+                  <template #icon><reload-outlined /></template>
+                  刷新列表
+                </a-button>
+              </a-space>
             </div>
+
+            <a-form layout="vertical" class="site-select-form">
+              <a-form-item label="网站路径" required>
+                <a-input 
+                  v-model:value="packConfig.sitePath" 
+                  placeholder="请选择或输入网站文件夹路径"
+                  size="large"
+                >
+                  <template #suffix>
+                    <folder-outlined 
+                      class="input-icon" 
+                      @click="selectSiteFolder"
+                    />
+                  </template>
+                </a-input>
+                <div class="form-tip">
+                  <info-circle-outlined />
+                  <span>可以选择已下载的网站,或任意其他网站文件夹</span>
+                </div>
+              </a-form-item>
+            </a-form>
 
             <div v-if="loading" class="loading-state">
               <a-spin size="large" tip="加载中..." />
@@ -170,15 +320,22 @@
               </a-row>
 
               <a-form-item label="输出目录">
-                <a-input 
-                  v-model:value="packConfig.outputDir" 
-                  placeholder="选择输出目录"
-                  size="large"
-                >
-                  <template #suffix>
-                    <folder-outlined class="input-icon" />
-                  </template>
-                </a-input>
+                <a-input-group compact style="display: flex;">
+                  <a-input 
+                    v-model:value="packConfig.outputDir" 
+                    placeholder="选择输出目录"
+                    size="large"
+                    style="flex: 1;"
+                  />
+                  <a-button size="large" @click="selectOutputDir">
+                    <template #icon><folder-open-outlined /></template>
+                    选择
+                  </a-button>
+                </a-input-group>
+                <div class="form-tip">
+                  <info-circle-outlined />
+                  <span>打包后的应用将保存到此目录</span>
+                </div>
               </a-form-item>
             </a-form>
           </div>
@@ -285,11 +442,32 @@ import {
   QuestionCircleOutlined,
   ReloadOutlined,
   InboxOutlined,
-  CloudDownloadOutlined
+  CloudDownloadOutlined,
+  ToolOutlined,
+  CodeOutlined,
+  DownloadOutlined,
+  FolderOpenOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons-vue';
 import { App } from "../../../bindings/go-site-clone";
+import { Events } from '@wailsio/runtime';
 
 const router = useRouter();
+
+// 环境状态
+const envStatus = ref({
+  hasGo: false,
+  goVersion: '',
+  hasWails: false,
+  wailsVersion: '',
+  goPath: '',
+  wailsPath: ''
+});
+const envChecking = ref(false);
+const goInstalling = ref(false);
+const wailsInstalling = ref(false);
+const installGoModalVisible = ref(false);
+const goVersionToInstall = ref('1.25.3');
 
 // 步骤控制
 const currentStep = ref(0);
@@ -302,6 +480,117 @@ const loading = ref(false);
 // 从后端获取已下载的网站列表
 const availableSites = ref<any[]>([]);
 
+// 应用配置
+const appConfig = ref({
+  name: '',
+  version: '1.0.0',
+  author: '',
+  description: ''
+});
+
+// 打包配置
+const packConfig = ref({
+  sitePath: '',
+  platforms: ['windows'],
+  width: 1280,
+  height: 800,
+  outputDir: ''
+});
+
+// 检查环境
+const checkEnv = async () => {
+  envChecking.value = true;
+  try {
+    const status = await App.CheckEnvironment();
+    if (status) {
+      envStatus.value = status;
+    }
+  } catch (error: any) {
+    console.error('检查环境失败:', error);
+    message.error('检查环境失败');
+  } finally {
+    envChecking.value = false;
+  }
+};
+
+// 显示安装Go对话框
+const showInstallGoModal = () => {
+  installGoModalVisible.value = true;
+};
+
+// 安装Go
+const installGo = async () => {
+  goInstalling.value = true;
+  try {
+    await App.InstallGo(goVersionToInstall.value);
+    message.success('Go 安装完成');
+    installGoModalVisible.value = false;
+    await checkEnv();
+  } catch (error: any) {
+    console.error('安装Go失败:', error);
+    message.error(error.message || '安装Go失败');
+  } finally {
+    goInstalling.value = false;
+  }
+};
+
+// 安装Wails
+const installWails = async () => {
+  wailsInstalling.value = true;
+  try {
+    await App.InstallWails();
+    message.success('Wails3 安装完成');
+    await checkEnv();
+  } catch (error: any) {
+    console.error('安装Wails失败:', error);
+    message.error(error.message || '安装Wails失败');
+  } finally {
+    wailsInstalling.value = false;
+  }
+};
+
+// 获取环境警告信息
+const getEnvWarning = () => {
+  if (!envStatus.value.hasGo && !envStatus.value.hasWails) {
+    return '打包应用需要 Go 和 Wails3 环境,请先安装这两个工具。';
+  } else if (!envStatus.value.hasGo) {
+    return '打包应用需要 Go 环境,请先安装 Go。';
+  } else if (!envStatus.value.hasWails) {
+    return '打包应用需要 Wails3 环境,请先安装 Wails3。';
+  }
+  return '';
+};
+
+// 选择网站文件夹
+const selectSiteFolder = async () => {
+  try {
+    const folderPath = await App.SelectFolder();
+    if (folderPath) {
+      packConfig.value.sitePath = folderPath;
+      message.success('已选择文件夹');
+    }
+  } catch (error: any) {
+    if (error.message && error.message !== 'User cancelled') {
+      message.error('选择文件夹失败');
+    }
+  }
+};
+
+// 选择输出目录
+const selectOutputDir = async () => {
+  try {
+    const folderPath = await App.SelectFolder();
+    if (folderPath) {
+      packConfig.value.outputDir = folderPath;
+      message.success('已选择输出目录');
+    }
+  } catch (error: any) {
+    if (error.message && error.message !== 'User cancelled') {
+      message.error('选择文件夹失败');
+    }
+  }
+};
+
 // 获取网站列表
 const getDownloadList = async () => {
   loading.value = true;
@@ -311,7 +600,7 @@ const getDownloadList = async () => {
       id: index.toString(),
       name: site.name,
       size: formatSize(site.size),
-      files: '未知', // 如果后端提供文件数量可以使用
+      files: '未知',
       modTime: site.modTime,
       rawData: site
     }));
@@ -334,33 +623,52 @@ const formatSize = (bytes: number) => {
 
 // 页面挂载时加载数据
 onMounted(() => {
+  checkEnv();
   getDownloadList();
-});
 
-// 应用配置
-const appConfig = ref({
-  name: '',
-  version: '1.0.0',
-  author: '',
-  description: ''
-});
+  // 监听安装进度
+  Events.On('install:progress', (event: any) => {
+    const data = event.data[0];
+    if (data.tool === 'go') {
+      if (data.step === 'error') {
+        message.error('Go 安装失败: ' + data.error);
+        goInstalling.value = false;
+      }
+    } else if (data.tool === 'wails') {
+      if (data.step === 'error') {
+        message.error('Wails3 安装失败: ' + data.error);
+        wailsInstalling.value = false;
+      }
+    }
+  });
 
-// 打包配置
-const packConfig = ref({
-  platforms: ['windows'],
-  width: 1280,
-  height: 800,
-  outputDir: ''
+  // 监听打包进度
+  Events.On('pack:progress', (event: any) => {
+    const data = event.data[0];
+    packProgress.value = data.percent;
+    packProgressText.value = data.message;
+    if (data.step === 'error') {
+      message.error('打包失败: ' + data.error);
+      packing.value = false;
+    } else if (data.step === 'completed') {
+      packing.value = false;
+    }
+  });
 });
 
 // 计算属性
 const selectedSiteName = computed(() => {
-  const site = availableSites.value.find(s => s.id === selectedSite.value);
-  return site?.name || '';
+  if (packConfig.value.sitePath) {
+    const parts = packConfig.value.sitePath.split(/[\/\\]/);
+    return parts[parts.length - 1] || packConfig.value.sitePath;
+  }
+  return '';
 });
 
 const canProceed = computed(() => {
-  if (currentStep.value === 0) return selectedSite.value !== '';
+  if (currentStep.value === 0) {
+    return packConfig.value.sitePath !== '' && envStatus.value.hasGo && envStatus.value.hasWails;
+  }
   if (currentStep.value === 1) return appConfig.value.name !== '';
   if (currentStep.value === 2) return packConfig.value.platforms.length > 0;
   return true;
@@ -380,29 +688,33 @@ const prevStep = () => {
 };
 
 // 开始打包
-const startPacking = () => {
+const startPacking = async () => {
+  if (!envStatus.value.hasGo || !envStatus.value.hasWails) {
+    message.error('请先安装 Go 和 Wails3 环境');
+    return;
+  }
+
   packing.value = true;
   packProgress.value = 0;
-  
-  // 模拟打包进度
-  const interval = setInterval(() => {
-    packProgress.value += 10;
-    
-    if (packProgress.value <= 30) {
-      packProgressText.value = '正在准备打包环境...';
-    } else if (packProgress.value <= 60) {
-      packProgressText.value = '正在编译应用...';
-    } else if (packProgress.value <= 90) {
-      packProgressText.value = '正在生成安装包...';
-    } else {
-      packProgressText.value = '打包完成！';
-    }
-    
-    if (packProgress.value >= 100) {
-      clearInterval(interval);
-      packing.value = false;
-    }
-  }, 500);
+
+  try {
+    await App.PackApp({
+      sitePath: packConfig.value.sitePath,
+      appName: appConfig.value.name,
+      version: appConfig.value.version,
+      author: appConfig.value.author,
+      description: appConfig.value.description,
+      platforms: packConfig.value.platforms,
+      width: packConfig.value.width,
+      height: packConfig.value.height,
+      outputDir: packConfig.value.outputDir
+    });
+    message.success('应用打包完成!');
+  } catch (error: any) {
+    console.error('打包失败:', error);
+    message.error(error.message || '打包失败');
+    packing.value = false;
+  }
 };
 
 // 获取头像颜色
@@ -447,6 +759,133 @@ const goToDownload = () => {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   position: relative;
   overflow: hidden;
+}
+
+/* 环境检查卡片 */
+.env-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.card-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.title-icon {
+  font-size: 20px;
+  color: #1890ff;
+}
+
+.env-item {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.env-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.env-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.env-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.env-icon {
+  font-size: 32px;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.go-icon {
+  color: #00add8;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.wails-icon {
+  color: #f44336;
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+}
+
+.env-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.env-info {
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.info-row .label {
+  color: #666;
+  font-weight: 500;
+}
+
+.info-row .value {
+  color: #333;
+  font-family: 'Consolas', monospace;
+}
+
+.info-row .value.path {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.env-actions {
+  text-align: center;
+}
+
+.hint-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+.form-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+.site-select-form {
+  max-width: 800px;
+  margin-top: 24px;
 }
 
 /* 背景装饰 - 复用之前的样式 */

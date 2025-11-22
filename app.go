@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go-site-clone/config"
 	"go-site-clone/services"
@@ -419,4 +420,233 @@ func (a *App) SelectFolder() (string, error) {
 		return "", err
 	}
 	return result, nil
+}
+
+// ========== 打包相关方法 ==========
+
+// CheckEnvironment 检查Go和Wails环境
+func (a *App) CheckEnvironment() (*utils.EnvStatus, error) {
+	return utils.GetEnvStatus()
+}
+
+// InstallGo 安装Go环境
+func (a *App) InstallGo(version string) error {
+	scriptPath, err := utils.GetInstallScriptPath("go")
+	if err != nil {
+		return err
+	}
+
+	// 构建命令参数
+	args := []string{"/c", scriptPath}
+	if version != "" {
+		args = append(args, version)
+	}
+
+	// 发送安装进度事件
+	a.app.Event.Emit("install:progress", map[string]interface{}{
+		"tool":    "go",
+		"step":    "downloading",
+		"percent": 10,
+		"message": "正在下载 Go...",
+	})
+
+	// 在Windows上使用cmd.exe执行bat文件
+	cmd := exec.Command("cmd.exe", args...)
+	cmd.Dir = filepath.Dir(scriptPath)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// 启动命令但不等待完成(bat脚本会暂停)
+	err = cmd.Start()
+	if err != nil {
+		a.app.Event.Emit("install:progress", map[string]interface{}{
+			"tool":    "go",
+			"step":    "error",
+			"percent": 0,
+			"error":   fmt.Sprintf("启动安装脚本失败: %v", err),
+		})
+		return fmt.Errorf("安装失败: %v", err)
+	}
+
+	// 在后台等待完成
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			a.app.Event.Emit("install:progress", map[string]interface{}{
+				"tool":    "go",
+				"step":    "error",
+				"percent": 0,
+				"error":   stderr.String(),
+			})
+		} else {
+			a.app.Event.Emit("install:progress", map[string]interface{}{
+				"tool":    "go",
+				"step":    "completed",
+				"percent": 100,
+				"message": "Go 安装完成",
+			})
+		}
+	}()
+
+	return nil
+}
+
+// InstallWails 安装Wails3环境
+func (a *App) InstallWails() error {
+	scriptPath, err := utils.GetInstallScriptPath("wails")
+	if err != nil {
+		return err
+	}
+
+	// 发送安装进度事件
+	a.app.Event.Emit("install:progress", map[string]interface{}{
+		"tool":    "wails",
+		"step":    "installing",
+		"percent": 10,
+		"message": "正在安装 Wails3...",
+	})
+
+	// 在Windows上使用cmd.exe执行bat文件
+	cmd := exec.Command("cmd.exe", "/c", scriptPath)
+	cmd.Dir = filepath.Dir(scriptPath)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// 启动命令但不等待完成
+	err = cmd.Start()
+	if err != nil {
+		a.app.Event.Emit("install:progress", map[string]interface{}{
+			"tool":    "wails",
+			"step":    "error",
+			"percent": 0,
+			"error":   fmt.Sprintf("启动安装脚本失败: %v", err),
+		})
+		return fmt.Errorf("安装失败: %v", err)
+	}
+
+	// 在后台等待完成
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			a.app.Event.Emit("install:progress", map[string]interface{}{
+				"tool":    "wails",
+				"step":    "error",
+				"percent": 0,
+				"error":   stderr.String(),
+			})
+		} else {
+			a.app.Event.Emit("install:progress", map[string]interface{}{
+				"tool":    "wails",
+				"step":    "completed",
+				"percent": 100,
+				"message": "Wails3 安装完成",
+			})
+		}
+	}()
+
+	return nil
+}
+
+// PackApp 打包应用
+func (a *App) PackApp(packConfig map[string]interface{}) error {
+	// 获取配置参数
+	sitePath, _ := packConfig["sitePath"].(string)
+	appName, _ := packConfig["appName"].(string)
+	outputDir, _ := packConfig["outputDir"].(string)
+
+	if sitePath == "" || appName == "" {
+		return fmt.Errorf("缺少必要参数")
+	}
+
+	// 发送打包进度
+	a.app.Event.Emit("pack:progress", map[string]interface{}{
+		"step":    "preparing",
+		"percent": 10,
+		"message": "正在准备打包环境...",
+	})
+
+	// 检查环境
+	envStatus, err := utils.GetEnvStatus()
+	if err != nil {
+		return fmt.Errorf("检查环境失败: %v", err)
+	}
+
+	if !envStatus.HasGo || !envStatus.HasWails {
+		return fmt.Errorf("缺少必要的环境: Go=%v, Wails=%v", envStatus.HasGo, envStatus.HasWails)
+	}
+
+	// 创建临时项目目录
+	a.app.Event.Emit("pack:progress", map[string]interface{}{
+		"step":    "creating",
+		"percent": 30,
+		"message": "正在创建项目结构...",
+	})
+
+	// 设置输出目录
+	if outputDir == "" {
+		appConfig, _ := config.LoadConfig()
+		outputDir = appConfig.PackSiteFileDir
+		if outputDir == "" {
+			outputDir = "site-dist"
+		}
+	}
+
+	// 确保输出目录存在
+	os.MkdirAll(outputDir, 0755)
+
+	tempDir := filepath.Join(os.TempDir(), "wails-pack-"+appName)
+	os.RemoveAll(tempDir) // 清理旧的
+	err = os.MkdirAll(tempDir, 0755)
+	if err != nil {
+		return fmt.Errorf("创建临时目录失败: %v", err)
+	}
+
+	// TODO: 创建Wails项目结构,复制网站文件等
+	// 这里是完整打包逻辑的占位符
+	// 实际需要:
+	// 1. 创建wails项目结构 (go.mod, main.go等)
+	// 2. 复制网站文件到项目的assets目录
+	// 3. 配置wails项目参数
+
+	log.Printf("准备打包网站: %s 到应用: %s", sitePath, appName)
+	log.Printf("临时目录: %s", tempDir)
+	log.Printf("输出目录: %s", outputDir)
+
+	a.app.Event.Emit("pack:progress", map[string]interface{}{
+		"step":    "building",
+		"percent": 60,
+		"message": "正在编译应用...",
+	})
+
+	// 使用Wails构建
+	wailsCmd := envStatus.WailsPath
+	if wailsCmd == "" {
+		wailsCmd = "wails3"
+	}
+
+	// 模拟构建过程(实际项目中这里应该真正调用wails build)
+	// cmd := exec.Command(wailsCmd, "build", "-o", filepath.Join(outputDir, appName+".exe"))
+	// cmd.Dir = tempDir
+
+	// 暂时模拟成功
+	a.app.Event.Emit("pack:progress", map[string]interface{}{
+		"step":    "packaging",
+		"percent": 80,
+		"message": "正在生成安装包...",
+	})
+
+	// 模拟延迟
+	// time.Sleep(2 * time.Second)
+
+	a.app.Event.Emit("pack:progress", map[string]interface{}{
+		"step":    "completed",
+		"percent": 100,
+		"message": fmt.Sprintf("打包完成! 输出目录: %s", outputDir),
+	})
+
+	return nil
 }

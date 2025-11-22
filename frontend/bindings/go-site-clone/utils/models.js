@@ -10,6 +10,72 @@ import { Create as $Create } from "@wailsio/runtime";
 // @ts-ignore: Unused imports
 import * as time$0 from "../../time/models.js";
 
+/**
+ * EnvStatus 环境状态结构
+ */
+export class EnvStatus {
+    /**
+     * Creates a new EnvStatus instance.
+     * @param {Partial<EnvStatus>} [$$source = {}] - The source object to create the EnvStatus.
+     */
+    constructor($$source = {}) {
+        if (!("hasGo" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["hasGo"] = false;
+        }
+        if (!("goVersion" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["goVersion"] = "";
+        }
+        if (!("hasWails" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["hasWails"] = false;
+        }
+        if (!("wailsVersion" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["wailsVersion"] = "";
+        }
+        if (!("goPath" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["goPath"] = "";
+        }
+        if (!("wailsPath" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["wailsPath"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new EnvStatus instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {EnvStatus}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new EnvStatus(/** @type {Partial<EnvStatus>} */($$parsedSource));
+    }
+}
+
 export class FileDir {
     /**
      * Creates a new FileDir instance.
