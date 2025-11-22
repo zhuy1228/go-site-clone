@@ -7,10 +7,16 @@ import (
 )
 
 type AppConfig struct {
-	Port            int    `yaml:"port"`
-	AppName         string `yaml:"appName"`
-	SiteFileDir     string `yaml:"siteFileDir"`
-	PackSiteFileDir string `yaml:"packSiteFileDir"`
+	Port            int         `yaml:"port"`
+	AppName         string      `yaml:"appName"`
+	SiteFileDir     string      `yaml:"siteFileDir"`
+	PackSiteFileDir string      `yaml:"packSiteFileDir"`
+	Nginx           NginxConfig `yaml:"nginx"`
+}
+
+type NginxConfig struct {
+	NginxPath     string `yaml:"nginxPath"`
+	NginxConfPath string `yaml:"nginxConfPath"`
 }
 
 func LoadConfig() (*AppConfig, error) {

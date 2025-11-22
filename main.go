@@ -2,7 +2,7 @@ package main
 
 import (
 	"embed"
-	_ "embed"
+	"go-site-clone/config"
 	"log"
 	"time"
 
@@ -27,10 +27,15 @@ func main() {
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
+	appConfig, _ := config.LoadConfig()
 	appService := &App{}
+
+	// 初始化 nginx 服务并检测状态
+	appService.OnStartup()
+
 	app := application.New(application.Options{
-		Name:        "wails3-nuxt",
-		Description: "A demo of using raw HTML & CSS",
+		Name:        appConfig.AppName,
+		Description: "A powerful website cloning and local deployment tool built with Wails3 + Nuxt.js",
 		Services: []application.Service{
 			application.NewService(appService),
 			application.NewService(&GreetService{}),
@@ -49,7 +54,7 @@ func main() {
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title: "Window 1",
+		Title: appConfig.AppName,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,

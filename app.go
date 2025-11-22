@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"go-site-clone/config"
 	"go-site-clone/services"
+	"go-site-clone/storage"
+	"go-site-clone/types"
 	"go-site-clone/utils"
+	"log"
 	"net/url"
 	"os"
 	"os/exec"
@@ -15,10 +18,52 @@ import (
 )
 
 type App struct {
-	app *application.App
+	app          *application.App
+	nginxService *services.NginxService
+	store        *storage.Store
 }
 
 var siteService services.SiteService
+
+// 服务启动时初始化 nginx 服务和数据库
+func (a *App) OnStartup() {
+	// 初始化数据库
+	dbPath := "data/site-clone.db"
+	store, err := storage.NewStore(dbPath)
+	if err != nil {
+		log.Printf("初始化数据库失败: %v", err)
+	} else {
+		a.store = store
+		log.Printf("数据库初始化成功")
+	}
+
+	// 初始化 nginx 服务
+	a.nginxService = &services.NginxService{}
+
+	// 检测 nginx 是否已经在运行
+	running, err := a.nginxService.CheckStatus()
+	if err == nil && running {
+		a.nginxService.Running = true
+		fmt.Println("nginx 服务已检测到正在运行")
+	} else {
+		a.nginxService.Running = false
+		fmt.Println("nginx 服务未运行")
+	}
+}
+
+// 服务关闭时不关闭 nginx，但关闭数据库
+func (a *App) OnShutdown() {
+	// 关闭数据库连接
+	if a.store != nil {
+		if err := a.store.Close(); err != nil {
+			log.Printf("关闭数据库失败: %v", err)
+		} else {
+			log.Println("数据库已关闭")
+		}
+	}
+	// 不做其他事，让 nginx 继续运行
+	fmt.Println("应用关闭，nginx 服务保持运行状态")
+}
 
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
@@ -29,9 +74,10 @@ var siteService services.SiteService
 
 // func (a *App) ServiceShutdown(ctx context.Context) error {
 
-// 	return nil
-// }
-
+//		return nil
+//	}
+//
+// ========== 网站克隆相关方法 ==========
 func (a *App) GetResources(rawURL string) *services.ResourcesList {
 	RequestParamsAll, RouterAll := siteService.GetAllResources(rawURL)
 	// 再次去重 根据url链接去除重复项
@@ -57,6 +103,7 @@ func (a *App) GetResources(rawURL string) *services.ResourcesList {
 	return resources
 }
 
+// 下载网站资源
 func (a *App) DownloadSite(uri string, obj services.ResourcesList) bool {
 	// 将页面及资源一起返回
 	parsed, _ := url.Parse(uri)
@@ -106,9 +153,11 @@ func (a *App) DownloadSite(uri string, obj services.ResourcesList) bool {
 			a.app.Event.Emit("download:dom", k)
 		}
 	}
+
 	return true
 }
 
+// 获取本地已下载网站列表
 func (a *App) GetDownloadList() []utils.FileDir {
 	return siteService.GetLocalSiteList()
 }
@@ -126,6 +175,7 @@ func (a *App) OpenSiteFileDir(pathDir string) bool {
 	return true
 }
 
+// 删除网站文件夹
 func (a *App) DeleteSiteFileDir(pathDir string) bool {
 	appConfig, _ := config.LoadConfig()
 	newPath := filepath.Join(appConfig.SiteFileDir, pathDir)
@@ -135,4 +185,223 @@ func (a *App) DeleteSiteFileDir(pathDir string) bool {
 		return false
 	}
 	return true
+}
+
+// ========== Nginx 相关方法 ==========
+
+// 启动 Nginx
+func (a *App) StartNginx() error {
+	return a.nginxService.StartNginx()
+}
+
+// 停止 Nginx
+func (a *App) StopNginx() error {
+	return a.nginxService.StopNginx()
+}
+
+// 重启 Nginx
+func (a *App) RestartNginx() error {
+	return a.nginxService.RestartNginx()
+}
+
+// 重载 Nginx 配置
+func (a *App) ReloadNginx() error {
+	return a.nginxService.ReloadNginx()
+}
+
+// 检查 Nginx 状态
+func (a *App) CheckNginxStatus() (bool, error) {
+	running, err := a.nginxService.CheckStatus()
+	if err == nil {
+		a.nginxService.Running = running
+	}
+	return running, err
+}
+
+// 测试 Nginx 配置
+func (a *App) TestNginxConfig() error {
+	return a.nginxService.TestConfig()
+}
+
+// 添加站点配置
+func (a *App) AddNginxSite(site types.NginxSiteConfig) error {
+	// 先保存到数据库
+	if a.store != nil {
+		if err := a.store.AddSite(site); err != nil {
+			return fmt.Errorf("保存站点到数据库失败: %v", err)
+		}
+	}
+	// 再创建 nginx 配置文件
+	return a.nginxService.AddSite(site)
+}
+
+// 删除站点配置
+func (a *App) DeleteNginxSite(siteName string) error {
+	// 从数据库删除
+	if a.store != nil {
+		if err := a.store.DeleteSite(siteName); err != nil {
+			log.Printf("警告: 从数据库删除站点失败: %v", err)
+		}
+	}
+	// 删除 nginx 配置文件
+	return a.nginxService.DeleteSite(siteName)
+}
+
+// 更新站点配置
+func (a *App) UpdateNginxSite(site types.NginxSiteConfig) error {
+	// 更新数据库
+	if a.store != nil {
+		if err := a.store.UpdateSite(site); err != nil {
+			return fmt.Errorf("更新数据库失败: %v", err)
+		}
+	}
+	// 更新 nginx 配置
+	return a.nginxService.UpdateSite(site)
+}
+
+// 获取所有站点配置
+func (a *App) GetAllNginxSites() ([]types.NginxSiteConfig, error) {
+	// 优先从数据库读取
+	if a.store != nil {
+		sites, err := a.store.GetAllSites()
+		if err == nil && len(sites) > 0 {
+			return sites, nil
+		}
+	}
+	// 如果数据库为空，从 nginx 配置文件读取并同步到数据库
+	sites, err := a.nginxService.GetAllSites()
+	if err != nil {
+		return nil, err
+	}
+	// 同步到数据库
+	if a.store != nil {
+		for _, site := range sites {
+			a.store.AddSite(site)
+		}
+	}
+	return sites, nil
+}
+
+// 启用站点
+func (a *App) EnableNginxSite(siteName string) error {
+	// 更新数据库
+	if a.store != nil {
+		if err := a.store.UpdateSiteStatus(siteName, true); err != nil {
+			log.Printf("警告: 更新数据库失败: %v", err)
+		}
+	}
+	return a.nginxService.EnableSite(siteName)
+}
+
+// 禁用站点
+func (a *App) DisableNginxSite(siteName string) error {
+	// 更新数据库
+	if a.store != nil {
+		if err := a.store.UpdateSiteStatus(siteName, false); err != nil {
+			log.Printf("警告: 更新数据库失败: %v", err)
+		}
+	}
+	return a.nginxService.DisableSite(siteName)
+}
+
+// 获取 Nginx 访问日志
+func (a *App) GetNginxAccessLog(lines int) ([]string, error) {
+	return a.nginxService.GetAccessLog(lines)
+}
+
+// 获取 Nginx 错误日志
+func (a *App) GetNginxErrorLog(lines int) ([]string, error) {
+	return a.nginxService.GetErrorLog(lines)
+}
+
+// 清空 Nginx 日志
+func (a *App) ClearNginxLogs() error {
+	return a.nginxService.ClearLogs()
+}
+
+// 获取可用端口号（从 startPort 开始查找）
+func (a *App) getAvailablePort(startPort int) int {
+	// 获取所有已配置的站点
+	sites, err := a.nginxService.GetAllSites()
+	if err != nil {
+		return startPort
+	}
+
+	// 收集已使用的端口
+	usedPorts := make(map[int]bool)
+	for _, site := range sites {
+		if site.Port > 0 {
+			usedPorts[site.Port] = true
+		}
+	}
+
+	// 查找可用端口
+	port := startPort
+	for {
+		if !usedPorts[port] {
+			return port
+		}
+		port++
+		if port > 65535 {
+			return startPort // 如果超出范围，返回默认端口
+		}
+	}
+}
+
+// ========== 下载记录相关方法 ==========
+
+// AddDownloadRecord 添加下载记录
+func (a *App) AddDownloadRecord(record storage.DownloadRecord) error {
+	if a.store == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+	return a.store.AddDownloadRecord(record)
+}
+
+// GetAllDownloadRecords 获取所有下载记录
+func (a *App) GetAllDownloadRecords() ([]storage.DownloadRecord, error) {
+	if a.store == nil {
+		return nil, fmt.Errorf("数据库未初始化")
+	}
+	return a.store.GetAllDownloadRecords()
+}
+
+// GetRecentDownloadRecords 获取最近的下载记录
+func (a *App) GetRecentDownloadRecords(limit int) ([]storage.DownloadRecord, error) {
+	if a.store == nil {
+		return nil, fmt.Errorf("数据库未初始化")
+	}
+	return a.store.GetRecentDownloadRecords(limit)
+}
+
+// GetDownloadStats 获取下载统计
+func (a *App) GetDownloadStats() (map[string]interface{}, error) {
+	if a.store == nil {
+		return nil, fmt.Errorf("数据库未初始化")
+	}
+	return a.store.GetDownloadStats()
+}
+
+// DeleteDownloadRecord 删除下载记录
+func (a *App) DeleteDownloadRecord(id string) error {
+	if a.store == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+	return a.store.DeleteDownloadRecord(id)
+}
+
+// ClearOldDownloadRecords 清理旧的下载记录
+func (a *App) ClearOldDownloadRecords(days int) (int, error) {
+	if a.store == nil {
+		return 0, fmt.Errorf("数据库未初始化")
+	}
+	return a.store.ClearOldDownloadRecords(days)
+}
+
+// BackupDatabase 备份数据库
+func (a *App) BackupDatabase(backupPath string) error {
+	if a.store == nil {
+		return fmt.Errorf("数据库未初始化")
+	}
+	return a.store.Backup(backupPath)
 }

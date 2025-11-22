@@ -8,3 +8,12 @@ siteFileDir: "www"
 
 # 打包的软件保存目录
 packSiteFileDir: "site-dist"
+
+
+# nginx 配置
+nginx:
+  # nginx 可执行文件路径
+  nginxPath: "plugin/nginx/nginx.exe"
+  # nginx 配置文件路径
+  nginxConfPath: "plugin/nginx/conf/nginx.conf"
+
