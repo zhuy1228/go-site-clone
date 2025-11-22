@@ -136,38 +136,38 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'site'">
               <div class="site-cell">
-                <a-avatar :style="{ backgroundColor: getAvatarColor(record.name) }" size="small">
-                  {{ record.name.charAt(0).toUpperCase() }}
+                <a-avatar :style="{ backgroundColor: getAvatarColor(record.Name || record.name) }" size="small">
+                  {{ (record.Name || record.name).charAt(0).toUpperCase() }}
                 </a-avatar>
                 <div class="site-details">
-                  <div class="site-name">{{ record.name }}</div>
-                  <div class="site-path">{{ record.path }}</div>
+                  <div class="site-name">{{ record.Name || record.name }}</div>
+                  <div class="site-path">{{ record.Path || record.path }}</div>
                 </div>
               </div>
             </template>
 
             <template v-else-if="column.key === 'domain'">
               <div class="domain-cell">
-                <a-tag color="blue" v-for="domain in record.domains" :key="domain">
+                <a-tag color="blue" v-for="domain in (record.Domains || record.domains)" :key="domain">
                   {{ domain }}
                 </a-tag>
               </div>
             </template>
 
             <template v-else-if="column.key === 'port'">
-              <a-tag color="cyan">{{ record.port }}</a-tag>
+              <a-tag color="cyan">{{ record.Port || record.port }}</a-tag>
             </template>
 
             <template v-else-if="column.key === 'status'">
               <a-badge 
-                :status="record.enabled ? 'success' : 'default'"
-                :text="record.enabled ? '已启用' : '已禁用'"
+                :status="(record.Enabled !== undefined ? record.Enabled : record.enabled) ? 'success' : 'default'"
+                :text="(record.Enabled !== undefined ? record.Enabled : record.enabled) ? '已启用' : '已禁用'"
               />
             </template>
 
             <template v-else-if="column.key === 'action'">
               <a-space size="small">
-                <a-button type="link" size="small" @click="openSite(record)" :disabled="!nginxRunning || !record.enabled">
+                <a-button type="link" size="small" @click="openSite(record)" :disabled="!nginxRunning || !(record.Enabled !== undefined ? record.Enabled : record.enabled)">
                   <template #icon><eye-outlined /></template>
                   访问
                 </a-button>
@@ -180,9 +180,9 @@
                   编辑
                 </a-button>
                 <a-switch 
-                  v-model:checked="record.enabled" 
+                  :checked="record.Enabled !== undefined ? record.Enabled : record.enabled"
                   size="small"
-                  @change="toggleSiteStatus(record)"
+                  @change="(val: boolean) => toggleSiteStatus(record, val)"
                 />
                 <a-popconfirm
                   title="确定要删除此站点吗？"
@@ -210,12 +210,12 @@
       @cancel="handleModalCancel"
     >
       <a-form :model="formData" layout="vertical" ref="formRef">
-        <a-form-item label="选择网站" name="name" :rules="[{ required: true, message: '请选择网站' }]">
-          <a-select v-model:value="formData.name" placeholder="请选择已下载的网站" @change="onSiteSelect">
-            <a-select-option v-for="site in availableSites" :key="site.name" :value="site.name">
-              {{ site.name }}
-            </a-select-option>
-          </a-select>
+        <a-form-item label="站点名称" name="name" :rules="[{ required: true, message: '请输入站点名称' }]">
+          <a-input v-model:value="formData.name" placeholder="请输入站点名称，如: example.com" />
+          <div class="form-tip">
+            <info-circle-outlined />
+            <span>可以输入域名或自定义名称</span>
+          </div>
         </a-form-item>
 
         <a-form-item label="域名配置" name="domains" :rules="[{ required: true, message: '请至少添加一个域名' }]">
@@ -252,10 +252,20 @@
         </a-row>
 
         <a-form-item label="网站路径" name="path" :rules="[{ required: true, message: '请输入网站路径' }]">
-          <a-input v-model:value="formData.path" placeholder="相对路径，如: www/example.com" />
+          <a-input-group compact style="display: flex;">
+            <a-input 
+              v-model:value="formData.path" 
+              placeholder="网站文件夹的绝对路径或相对路径"
+              style="flex: 1;"
+            />
+            <a-button type="primary" @click="handleSelectFolder">
+              <template #icon><folder-open-outlined /></template>
+              选择文件夹
+            </a-button>
+          </a-input-group>
           <div class="form-tip">
             <info-circle-outlined />
-            <span>相对于项目根目录的路径</span>
+            <span>支持绝对路径（如 D:/www/mysite）或相对路径（如 www/mysite）</span>
           </div>
         </a-form-item>
 
@@ -304,7 +314,6 @@ const totalVisits = ref(0);
 
 // 托管站点列表
 const hostingSites = ref<any[]>([]);
-const availableSites = ref<any[]>([]);
 
 // 对话框
 const modalVisible = ref(false);
@@ -362,7 +371,6 @@ onMounted(() => {
 // 加载数据
 const loadData = async () => {
   await Promise.all([
-    getAvailableSites(),
     getHostingSites(),
     checkNginxStatus()
   ]);
@@ -376,16 +384,6 @@ const checkNginxStatus = async () => {
     
   } catch (error) {
     console.error('获取 Nginx 状态失败:', error);
-  }
-};
-
-// 获取可用网站列表(已下载的)
-const getAvailableSites = async () => {
-  try {
-    const res = await App.GetDownloadList();
-    availableSites.value = res || [];
-  } catch (error) {
-    console.error('获取网站列表失败:', error);
   }
 };
 
@@ -450,17 +448,31 @@ const showAddModal = () => {
 // 编辑站点
 const editSite = (record: any) => {
   editingRecord.value = record;
-  formData.value = { ...record };
+  // 将后端字段转换为前端字段
+  formData.value = {
+    name: record.Name || record.name,
+    domains: record.Domains || record.domains || [],
+    port: record.Port || record.port,
+    path: record.Path || record.path,
+    index: record.Index || record.index || 'index.html',
+    enabled: record.Enabled !== undefined ? record.Enabled : record.enabled
+  };
   modalVisible.value = true;
 };
 
-// 网站选择改变
-const onSiteSelect = (value: string) => {
-  const site = availableSites.value.find(s => s.name === value);
-  if (site) {
-    // 设置网站路径（从工作目录）
-    formData.value.path = `www/${value}`;
-    formData.value.domains = [value, '127.0.0.1'];
+// 选择文件夹
+const handleSelectFolder = async () => {
+  try {
+    const folderPath = await App.SelectFolder();
+    if (folderPath) {
+      formData.value.path = folderPath;
+      message.success('已选择文件夹');
+    }
+  } catch (error: any) {
+    console.error('选择文件夹失败:', error);
+    if (error.message && error.message !== 'User cancelled') {
+      message.error('选择文件夹失败');
+    }
   }
 };
 
@@ -472,25 +484,25 @@ const handleModalOk = async () => {
     if (editingRecord.value) {
       // 更新站点配置
       await App.UpdateNginxSite({
-        ID: "",
-        Name: formData.value.name,
-        Domains: formData.value.domains,
-        Port: formData.value.port,
-        Path: formData.value.path,
-        Index: formData.value.index,
-        Enabled: formData.value.enabled
+        id: "",
+        name: formData.value.name,
+        domains: formData.value.domains,
+        port: formData.value.port,
+        path: formData.value.path,
+        index: formData.value.index,
+        enabled: formData.value.enabled
       });
       message.success('更新成功');
     } else {
       // 添加站点配置
       await App.AddNginxSite({
-        ID: "",
-        Name: formData.value.name,
-        Domains: formData.value.domains,
-        Port: formData.value.port,
-        Path: formData.value.path,
-        Index: formData.value.index,
-        Enabled: formData.value.enabled
+        id: "",
+        name: formData.value.name,
+        domains: formData.value.domains,
+        port: formData.value.port,
+        path: formData.value.path,
+        index: formData.value.index,
+        enabled: formData.value.enabled
       });
       message.success('站点配置创建成功');
     }
@@ -517,14 +529,27 @@ const handleModalCancel = () => {
 };
 
 // 切换站点状态
-const toggleSiteStatus = async (record: any) => {
+const toggleSiteStatus = async (record: any, enabled: boolean) => {
   try {
-    if (record.enabled) {
-      await App.EnableNginxSite(record.name);
+    const siteName = record.Name || record.name;
+    if (enabled) {
+      await App.EnableNginxSite(siteName);
       message.success('站点已启用');
+      // 更新本地状态
+      if (record.Enabled !== undefined) {
+        record.Enabled = true;
+      } else {
+        record.enabled = true;
+      }
     } else {
-      await App.DisableNginxSite(record.name);
+      await App.DisableNginxSite(siteName);
       message.success('站点已禁用');
+      // 更新本地状态
+      if (record.Enabled !== undefined) {
+        record.Enabled = false;
+      } else {
+        record.enabled = false;
+      }
     }
     
     // 如果 nginx 正在运行，重载配置
@@ -534,15 +559,16 @@ const toggleSiteStatus = async (record: any) => {
   } catch (error: any) {
     console.error('切换状态失败:', error);
     message.error(error.message || '操作失败');
-    // 回滚状态
-    record.enabled = !record.enabled;
+    // 重新加载数据恢复状态
+    await getHostingSites();
   }
 };
 
 // 删除站点
 const deleteSite = async (record: any) => {
   try {
-    await App.DeleteNginxSite(record.name);
+    const siteName = record.Name || record.name;
+    await App.DeleteNginxSite(siteName);
     message.success('站点配置已删除');
     
     // 重新加载站点列表
@@ -560,14 +586,17 @@ const deleteSite = async (record: any) => {
 
 // 访问站点
 const openSite = (record: any) => {
-  const url = `http://${record.domains[0]}:${record.port}`;
+  const domains = record.Domains || record.domains || [];
+  const port = record.Port || record.port;
+  const url = `http://${domains[0]}:${port}`;
   window.open(url, '_blank');
 };
 
 // 打开文件夹
 const openFolder = async (record: any) => {
   try {
-    await App.OpenSiteFileDir(record.name);
+    const siteName = record.Name || record.name;
+    await App.OpenSiteFileDir(siteName);
     message.success('已打开文件夹');
   } catch (error) {
     console.error('打开文件夹失败:', error);

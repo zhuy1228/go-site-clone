@@ -255,6 +255,14 @@ export function RestartNginx() {
 }
 
 /**
+ * SelectFolder 打开文件夹选择对话框
+ * @returns {$CancellablePromise<string>}
+ */
+export function SelectFolder() {
+    return $Call.ByID(237181597);
+}
+
+/**
  * 启动 Nginx
  * @returns {$CancellablePromise<void>}
  */

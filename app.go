@@ -405,3 +405,18 @@ func (a *App) BackupDatabase(backupPath string) error {
 	}
 	return a.store.Backup(backupPath)
 }
+
+// SelectFolder 打开文件夹选择对话框
+func (a *App) SelectFolder() (string, error) {
+	result, err := a.app.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		CanChooseDirectories: true,
+		CanChooseFiles:       false,
+		Title:                "选择网站文件夹",
+		ButtonText:           "选择",
+	}).PromptForSingleSelection()
+
+	if err != nil {
+		return "", err
+	}
+	return result, nil
+}
