@@ -33,12 +33,7 @@ tasks:
   package:
     summary: Packages a production build of the application
     cmds:
-      - |-
-        if [ "{{.FORMAT | default "nsis"}}" = "msix" ]; then
-          task: create:msix:package
-        else
-          task: create:nsis:installer
-        fi
+      - task: create:nsis:installer
     vars:
       FORMAT: '{{.FORMAT | default "nsis"}}'
 

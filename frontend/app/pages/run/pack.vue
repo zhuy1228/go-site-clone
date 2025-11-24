@@ -345,9 +345,15 @@
             <h3 class="step-title">准备打包</h3>
             <div class="pack-summary">
               <a-descriptions :column="1" bordered>
-                <a-descriptions-item label="网站名称">{{ selectedSiteName }}</a-descriptions-item>
+                <a-descriptions-item label="网站路径">
+                  <a-typography-paragraph :copyable="{ text: packConfig.sitePath }" style="margin: 0;">
+                    {{ packConfig.sitePath }}
+                  </a-typography-paragraph>
+                </a-descriptions-item>
                 <a-descriptions-item label="应用名称">{{ appConfig.name }}</a-descriptions-item>
                 <a-descriptions-item label="版本号">{{ appConfig.version }}</a-descriptions-item>
+                <a-descriptions-item label="作者">{{ appConfig.author || '未填写' }}</a-descriptions-item>
+                <a-descriptions-item label="描述">{{ appConfig.description || '未填写' }}</a-descriptions-item>
                 <a-descriptions-item label="目标平台">
                   <a-tag v-for="platform in packConfig.platforms" :key="platform" color="blue">
                     {{ platform }}
@@ -356,7 +362,21 @@
                 <a-descriptions-item label="窗口尺寸">
                   {{ packConfig.width }} x {{ packConfig.height }}
                 </a-descriptions-item>
+                <a-descriptions-item label="输出目录">
+                  <a-typography-paragraph :copyable="{ text: packConfig.outputDir || 'site-dist' }" style="margin: 0;">
+                    {{ packConfig.outputDir || 'site-dist (默认)' }}
+                  </a-typography-paragraph>
+                </a-descriptions-item>
               </a-descriptions>
+
+              <a-alert
+                v-if="!envStatus.hasGo || !envStatus.hasWails"
+                type="error"
+                message="环境检查失败"
+                description="打包需要 Go 和 Wails3 环境，请返回第一步安装所需环境。"
+                show-icon
+                style="margin-top: 16px;"
+              />
 
               <div class="pack-action">
                 <a-button 
@@ -364,6 +384,7 @@
                   size="large" 
                   :loading="packing"
                   @click="startPacking"
+                  :disabled="!envStatus.hasGo || !envStatus.hasWails"
                   block
                 >
                   <template #icon><rocket-outlined /></template>
@@ -372,9 +393,21 @@
               </div>
 
               <!-- 打包进度 -->
-              <div v-if="packing" class="pack-progress">
-                <a-progress :percent="packProgress" status="active" />
+              <div v-if="packing || packProgress > 0" class="pack-progress">
+                <a-progress 
+                  :percent="packProgress" 
+                  :status="packProgress === 100 ? 'success' : 'active'" 
+                />
                 <p class="progress-text">{{ packProgressText }}</p>
+                <a-alert
+                  v-if="packProgress < 100 && packProgress > 0"
+                  type="info"
+                  message="打包提示"
+                  description="首次打包需要下载依赖包，可能需要5-10分钟，请耐心等待..."
+                  show-icon
+                  closable
+                  style="margin-top: 12px;"
+                />
               </div>
             </div>
           </div>
@@ -410,16 +443,32 @@
         <div class="help-content">
           <p><strong>打包流程：</strong></p>
           <ol>
-            <li>选择要打包的已下载网站</li>
+            <li>确保已安装 Go 和 Wails3 开发环境</li>
+            <li>选择要打包的网站文件夹(包含HTML、CSS、JS等静态文件)</li>
             <li>填写应用的基本信息（名称、版本、作者等）</li>
-            <li>配置打包参数（目标平台、窗口大小等）</li>
-            <li>确认信息无误后开始打包</li>
+            <li>配置打包参数（目标平台、窗口大小、输出目录）</li>
+            <li>点击"开始打包"，等待编译完成</li>
           </ol>
+          <p><strong>打包原理：</strong></p>
+          <ul>
+            <li>自动创建一个新的 Wails3 项目</li>
+            <li>将您的静态网站文件嵌入到应用中</li>
+            <li>编译生成独立的桌面应用程序(.exe)</li>
+            <li>应用内置 WebView，无需浏览器即可运行</li>
+          </ul>
           <p><strong>注意事项：</strong></p>
           <ul>
-            <li>打包过程可能需要几分钟，请耐心等待</li>
-            <li>确保有足够的磁盘空间用于存储打包文件</li>
-            <li>不同平台的打包文件格式不同（Windows: .exe, macOS: .app, Linux: .AppImage）</li>
+            <li>首次打包需要下载依赖，可能耗时5-10分钟</li>
+            <li>确保有足够的磁盘空间（建议至少500MB）</li>
+            <li>网站文件夹应包含index.html作为入口</li>
+            <li>打包后的应用可独立运行，无需安装额外环境</li>
+            <li>Windows平台生成.exe文件，macOS生成.app，Linux生成可执行文件</li>
+          </ul>
+          <p><strong>输出位置：</strong></p>
+          <ul>
+            <li>默认输出到项目的 <code>site-dist</code> 目录</li>
+            <li>可自定义输出目录</li>
+            <li>打包完成后会在输出目录中找到可执行文件</li>
           </ul>
         </div>
       </a-card>
@@ -1230,6 +1279,19 @@ const goToDownload = () => {
 
 .help-content li {
   margin: 8px 0;
+}
+
+.help-content code {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', monospace;
+  font-size: 13px;
+  color: #d63384;
+}
+
+.help-content p {
+  margin: 12px 0;
 }
 
 /* 通用样式 */

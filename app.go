@@ -556,16 +556,35 @@ func (a *App) PackApp(packConfig map[string]interface{}) error {
 	// 获取配置参数
 	sitePath, _ := packConfig["sitePath"].(string)
 	appName, _ := packConfig["appName"].(string)
+	version, _ := packConfig["version"].(string)
+	author, _ := packConfig["author"].(string)
+	description, _ := packConfig["description"].(string)
 	outputDir, _ := packConfig["outputDir"].(string)
+	width, _ := packConfig["width"].(float64)
+	height, _ := packConfig["height"].(float64)
+
+	// 平台参数处理
+	platformsInterface, _ := packConfig["platforms"].([]interface{})
+	platforms := make([]string, 0)
+	for _, p := range platformsInterface {
+		if platform, ok := p.(string); ok {
+			platforms = append(platforms, platform)
+		}
+	}
 
 	if sitePath == "" || appName == "" {
-		return fmt.Errorf("缺少必要参数")
+		return fmt.Errorf("缺少必要参数: 网站路径和应用名称不能为空")
+	}
+
+	// 检查网站路径是否存在
+	if _, err := os.Stat(sitePath); os.IsNotExist(err) {
+		return fmt.Errorf("网站路径不存在: %s", sitePath)
 	}
 
 	// 发送打包进度
 	a.app.Event.Emit("pack:progress", map[string]interface{}{
 		"step":    "preparing",
-		"percent": 10,
+		"percent": 5,
 		"message": "正在准备打包环境...",
 	})
 
@@ -576,15 +595,25 @@ func (a *App) PackApp(packConfig map[string]interface{}) error {
 	}
 
 	if !envStatus.HasGo || !envStatus.HasWails {
-		return fmt.Errorf("缺少必要的环境: Go=%v, Wails=%v", envStatus.HasGo, envStatus.HasWails)
+		return fmt.Errorf("缺少必要的环境: Go=%v, Wails=%v。请先安装开发环境", envStatus.HasGo, envStatus.HasWails)
 	}
 
-	// 创建临时项目目录
-	a.app.Event.Emit("pack:progress", map[string]interface{}{
-		"step":    "creating",
-		"percent": 30,
-		"message": "正在创建项目结构...",
-	})
+	// 设置默认值
+	if version == "" {
+		version = "1.0.0"
+	}
+	if description == "" {
+		description = appName
+	}
+	if len(platforms) == 0 {
+		platforms = []string{"windows"}
+	}
+	if width == 0 {
+		width = 1280
+	}
+	if height == 0 {
+		height = 800
+	}
 
 	// 设置输出目录
 	if outputDir == "" {
@@ -595,8 +624,12 @@ func (a *App) PackApp(packConfig map[string]interface{}) error {
 		}
 	}
 
-	// 确保输出目录存在
-	os.MkdirAll(outputDir, 0755)
+	// 创建临时项目目录
+	a.app.Event.Emit("pack:progress", map[string]interface{}{
+		"step":    "creating",
+		"percent": 15,
+		"message": "正在创建Wails项目结构...",
+	})
 
 	tempDir := filepath.Join(os.TempDir(), "wails-pack-"+appName)
 	os.RemoveAll(tempDir) // 清理旧的
@@ -605,48 +638,63 @@ func (a *App) PackApp(packConfig map[string]interface{}) error {
 		return fmt.Errorf("创建临时目录失败: %v", err)
 	}
 
-	// TODO: 创建Wails项目结构,复制网站文件等
-	// 这里是完整打包逻辑的占位符
-	// 实际需要:
-	// 1. 创建wails项目结构 (go.mod, main.go等)
-	// 2. 复制网站文件到项目的assets目录
-	// 3. 配置wails项目参数
+	// 使用打包服务创建项目
+	packService := &services.PackService{}
+	config := services.PackConfig{
+		SitePath:    sitePath,
+		AppName:     appName,
+		Version:     version,
+		Author:      author,
+		Description: description,
+		Platforms:   platforms,
+		Width:       int(width),
+		Height:      int(height),
+		OutputDir:   outputDir,
+	}
 
-	log.Printf("准备打包网站: %s 到应用: %s", sitePath, appName)
+	log.Printf("开始打包网站: %s", sitePath)
+	log.Printf("应用名称: %s", appName)
 	log.Printf("临时目录: %s", tempDir)
 	log.Printf("输出目录: %s", outputDir)
 
 	a.app.Event.Emit("pack:progress", map[string]interface{}{
-		"step":    "building",
-		"percent": 60,
-		"message": "正在编译应用...",
+		"step":    "copying",
+		"percent": 30,
+		"message": "正在复制网站文件...",
 	})
 
-	// 使用Wails构建
-	wailsCmd := envStatus.WailsPath
-	if wailsCmd == "" {
-		wailsCmd = "wails3"
+	// 创建Wails项目结构
+	if err := packService.CreateWailsProject(config, tempDir); err != nil {
+		a.app.Event.Emit("pack:progress", map[string]interface{}{
+			"step":    "error",
+			"percent": 0,
+			"error":   fmt.Sprintf("创建项目失败: %v", err),
+		})
+		return fmt.Errorf("创建Wails项目失败: %v", err)
 	}
 
-	// 模拟构建过程(实际项目中这里应该真正调用wails build)
-	// cmd := exec.Command(wailsCmd, "build", "-o", filepath.Join(outputDir, appName+".exe"))
-	// cmd.Dir = tempDir
-
-	// 暂时模拟成功
 	a.app.Event.Emit("pack:progress", map[string]interface{}{
-		"step":    "packaging",
-		"percent": 80,
-		"message": "正在生成安装包...",
+		"step":    "building",
+		"percent": 50,
+		"message": "正在编译应用(这可能需要几分钟)...",
 	})
 
-	// 模拟延迟
-	// time.Sleep(2 * time.Second)
+	// 构建应用
+	if err := packService.BuildWailsApp(tempDir, outputDir, platforms); err != nil {
+		a.app.Event.Emit("pack:progress", map[string]interface{}{
+			"step":    "error",
+			"percent": 0,
+			"error":   fmt.Sprintf("构建失败: %v", err),
+		})
+		return fmt.Errorf("构建应用失败: %v", err)
+	}
 
 	a.app.Event.Emit("pack:progress", map[string]interface{}{
 		"step":    "completed",
 		"percent": 100,
-		"message": fmt.Sprintf("打包完成! 输出目录: %s", outputDir),
+		"message": fmt.Sprintf("打包完成! 应用已保存到: %s", outputDir),
 	})
 
+	log.Printf("打包完成! 输出目录: %s", outputDir)
 	return nil
 }
