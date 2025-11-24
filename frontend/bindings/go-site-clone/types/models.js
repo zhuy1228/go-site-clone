@@ -7,6 +7,125 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * DownloadMode 下载模式
+ * @readonly
+ * @enum {string}
+ */
+export const DownloadMode = {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero: "",
+
+    /**
+     * DownloadModeSameDomain 只下载同域名资源
+     */
+    DownloadModeSameDomain: "same-domain",
+
+    /**
+     * DownloadModeAllResources 下载所有资源
+     */
+    DownloadModeAllResources: "all-resources",
+
+    /**
+     * DownloadModeCustom 自定义下载规则
+     */
+    DownloadModeCustom: "custom",
+};
+
+/**
+ * DownloadOptions 下载配置选项
+ */
+export class DownloadOptions {
+    /**
+     * Creates a new DownloadOptions instance.
+     * @param {Partial<DownloadOptions>} [$$source = {}] - The source object to create the DownloadOptions.
+     */
+    constructor($$source = {}) {
+        if (!("mode" in $$source)) {
+            /**
+             * 下载模式
+             * @member
+             * @type {DownloadMode}
+             */
+            this["mode"] = DownloadMode.$zero;
+        }
+        if (!("customDomains" in $$source)) {
+            /**
+             * 自定义域名列表（当 Mode = custom 时使用）
+             * @member
+             * @type {string[]}
+             */
+            this["customDomains"] = [];
+        }
+        if (!("skipLargeFiles" in $$source)) {
+            /**
+             * 是否跳过超大文件
+             * @member
+             * @type {boolean}
+             */
+            this["skipLargeFiles"] = false;
+        }
+        if (!("maxFileSize" in $$source)) {
+            /**
+             * 最大文件大小（MB）
+             * @member
+             * @type {number}
+             */
+            this["maxFileSize"] = 0;
+        }
+        if (!("downloadExternalCSS" in $$source)) {
+            /**
+             * 是否下载外部CSS
+             * @member
+             * @type {boolean}
+             */
+            this["downloadExternalCSS"] = false;
+        }
+        if (!("downloadExternalJS" in $$source)) {
+            /**
+             * 是否下载外部JS
+             * @member
+             * @type {boolean}
+             */
+            this["downloadExternalJS"] = false;
+        }
+        if (!("downloadExternalImages" in $$source)) {
+            /**
+             * 是否下载外部图片
+             * @member
+             * @type {boolean}
+             */
+            this["downloadExternalImages"] = false;
+        }
+        if (!("downloadExternalVideos" in $$source)) {
+            /**
+             * 是否下载外部视频
+             * @member
+             * @type {boolean}
+             */
+            this["downloadExternalVideos"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DownloadOptions instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {DownloadOptions}
+     */
+    static createFrom($$source = {}) {
+        const $$createField1_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("customDomains" in $$parsedSource) {
+            $$parsedSource["customDomains"] = $$createField1_0($$parsedSource["customDomains"]);
+        }
+        return new DownloadOptions(/** @type {Partial<DownloadOptions>} */($$parsedSource));
+    }
+}
+
+/**
  * NginxSiteConfig 站点配置结构
  */
 export class NginxSiteConfig {

@@ -13,6 +13,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -106,56 +108,340 @@ func (a *App) GetResources(rawURL string) *services.ResourcesList {
 
 // 下载网站资源
 func (a *App) DownloadSite(uri string, obj services.ResourcesList) bool {
-	// 将页面及资源一起返回
-	parsed, _ := url.Parse(uri)
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		log.Printf("解析URL失败: %v", err)
+		return false
+	}
+
 	var File utils.File
-	if len(obj.CSS) > 0 {
-		for k, v := range obj.CSS {
-			u, _ := url.Parse(v)
-			if parsed.Hostname() == u.Hostname() {
-				File.Download(v)
-			}
-			a.app.Event.Emit("download:css", k)
-		}
+	hostname := parsed.Hostname()
+
+	// 统计总数和成功数
+	totalCount := 0
+	successCount := 0
+	failedCount := 0
+
+	// 定义下载任务结构
+	type downloadTask struct {
+		url     string
+		resType string
+		index   int
+		isHTML  bool
 	}
-	if len(obj.Script) > 0 {
-		for k, v := range obj.Script {
-			u, _ := url.Parse(v)
-			if parsed.Hostname() == u.Hostname() {
-				File.Download(v)
-			}
-			a.app.Event.Emit("download:script", k)
-		}
-	}
-	if len(obj.Image) > 0 {
-		for k, v := range obj.Image {
-			u, _ := url.Parse(v)
-			if parsed.Hostname() == u.Hostname() {
-				File.Download(v)
-			}
-			a.app.Event.Emit("download:image", k)
-		}
-	}
-	if len(obj.Video) > 0 {
-		for k, v := range obj.Video {
-			u, _ := url.Parse(v)
-			if parsed.Hostname() == u.Hostname() {
-				File.Download(v)
-			}
-			a.app.Event.Emit("download:video", k)
-		}
-	}
-	if len(obj.Dom) > 0 {
-		for k, v := range obj.Dom {
-			u, _ := url.Parse(v)
-			if parsed.Hostname() == u.Hostname() {
-				File.HTMLDownload(v)
-			}
-			a.app.Event.Emit("download:dom", k)
+
+	// 收集所有下载任务
+	var tasks []downloadTask
+
+	// CSS资源
+	for k, v := range obj.CSS {
+		if u, err := url.Parse(v); err == nil && u.Hostname() == hostname {
+			tasks = append(tasks, downloadTask{url: v, resType: "css", index: k, isHTML: false})
 		}
 	}
 
-	return true
+	// Script资源
+	for k, v := range obj.Script {
+		if u, err := url.Parse(v); err == nil && u.Hostname() == hostname {
+			tasks = append(tasks, downloadTask{url: v, resType: "script", index: k, isHTML: false})
+		}
+	}
+
+	// Image资源
+	for k, v := range obj.Image {
+		if u, err := url.Parse(v); err == nil && u.Hostname() == hostname {
+			tasks = append(tasks, downloadTask{url: v, resType: "image", index: k, isHTML: false})
+		}
+	}
+
+	// Video资源
+	for k, v := range obj.Video {
+		if u, err := url.Parse(v); err == nil && u.Hostname() == hostname {
+			tasks = append(tasks, downloadTask{url: v, resType: "video", index: k, isHTML: false})
+		}
+	}
+
+	// DOM资源（HTML页面）
+	for k, v := range obj.Dom {
+		if u, err := url.Parse(v); err == nil && u.Hostname() == hostname {
+			tasks = append(tasks, downloadTask{url: v, resType: "dom", index: k, isHTML: true})
+		}
+	}
+
+	totalCount = len(tasks)
+	if totalCount == 0 {
+		a.app.Event.Emit("download:complete", map[string]interface{}{
+			"total":   0,
+			"success": 0,
+			"failed":  0,
+		})
+		return true
+	}
+
+	// 并发控制：最多同时下载10个文件
+	maxConcurrent := 10
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// 下载开始时间
+	startTime := time.Now()
+
+	for _, task := range tasks {
+		wg.Add(1)
+		sem <- struct{}{} // 获取信号量
+
+		go func(t downloadTask) {
+			defer wg.Done()
+			defer func() { <-sem }() // 释放信号量
+
+			// 下载文件
+			var filePath string
+
+			if t.isHTML {
+				filePath = File.HTMLDownload(t.url)
+			} else {
+				filePath = File.Download(t.url)
+			}
+
+			// 更新统计
+			mu.Lock()
+			if filePath != "" {
+				successCount++
+			} else {
+				failedCount++
+				log.Printf("下载失败: %s", t.url)
+			}
+			mu.Unlock()
+
+			// 发送进度事件（兼容旧格式）
+			a.app.Event.Emit("download:"+t.resType, t.index)
+		}(task)
+	}
+
+	// 等待所有下载完成
+	wg.Wait()
+
+	// 计算下载耗时
+	duration := time.Since(startTime)
+
+	// 保存下载记录到数据库
+	if a.store != nil {
+		record := storage.DownloadRecord{
+			SiteName:   hostname,
+			URL:        uri,
+			TotalFiles: totalCount,
+			Downloaded: successCount,
+			Duration:   int64(duration.Seconds()),
+			Status:     "success",
+			StartTime:  startTime,
+			EndTime:    time.Now(),
+		}
+		if err := a.store.AddDownloadRecord(record); err != nil {
+			log.Printf("保存下载记录失败: %v", err)
+		}
+	}
+
+	// 发送完成事件
+	a.app.Event.Emit("download:complete", map[string]interface{}{
+		"total":    totalCount,
+		"success":  successCount,
+		"failed":   failedCount,
+		"duration": duration.Seconds(),
+		"siteName": hostname,
+	})
+
+	log.Printf("下载完成: 总数=%d, 成功=%d, 失败=%d, 耗时=%.2fs",
+		totalCount, successCount, failedCount, duration.Seconds())
+
+	return successCount > 0
+}
+
+// GetDownloadOptions 获取下载配置
+func (a *App) GetDownloadOptions() types.DownloadOptions {
+	return types.DefaultDownloadOptions()
+}
+
+// DownloadSiteWithOptions 带配置选项的下载网站资源
+func (a *App) DownloadSiteWithOptions(uri string, obj services.ResourcesList, options types.DownloadOptions) bool {
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		log.Printf("解析URL失败: %v", err)
+		return false
+	}
+
+	var File utils.File
+	hostname := parsed.Hostname()
+
+	// 统计总数和成功数
+	totalCount := 0
+	successCount := 0
+	failedCount := 0
+
+	// 定义下载任务结构
+	type downloadTask struct {
+		url     string
+		resType string
+		index   int
+		isHTML  bool
+	}
+
+	// 收集所有下载任务
+	var tasks []downloadTask
+
+	// CSS资源
+	for k, v := range obj.CSS {
+		if u, err := url.Parse(v); err == nil {
+			resHost := u.Hostname()
+			if u.Port() != "" {
+				resHost += ":" + u.Port()
+			}
+			if options.ShouldDownloadExternal(resHost, hostname, "css") {
+				tasks = append(tasks, downloadTask{url: v, resType: "css", index: k, isHTML: false})
+			}
+		}
+	}
+
+	// Script资源
+	for k, v := range obj.Script {
+		if u, err := url.Parse(v); err == nil {
+			resHost := u.Hostname()
+			if u.Port() != "" {
+				resHost += ":" + u.Port()
+			}
+			if options.ShouldDownloadExternal(resHost, hostname, "script") {
+				tasks = append(tasks, downloadTask{url: v, resType: "script", index: k, isHTML: false})
+			}
+		}
+	}
+
+	// Image资源
+	for k, v := range obj.Image {
+		if u, err := url.Parse(v); err == nil {
+			resHost := u.Hostname()
+			if u.Port() != "" {
+				resHost += ":" + u.Port()
+			}
+			if options.ShouldDownloadExternal(resHost, hostname, "image") {
+				tasks = append(tasks, downloadTask{url: v, resType: "image", index: k, isHTML: false})
+			}
+		}
+	}
+
+	// Video资源
+	for k, v := range obj.Video {
+		if u, err := url.Parse(v); err == nil {
+			resHost := u.Hostname()
+			if u.Port() != "" {
+				resHost += ":" + u.Port()
+			}
+			if options.ShouldDownloadExternal(resHost, hostname, "video") {
+				tasks = append(tasks, downloadTask{url: v, resType: "video", index: k, isHTML: false})
+			}
+		}
+	}
+
+	// DOM资源（HTML页面）
+	for k, v := range obj.Dom {
+		if u, err := url.Parse(v); err == nil {
+			resHost := u.Hostname()
+			if u.Port() != "" {
+				resHost += ":" + u.Port()
+			}
+			// HTML页面总是下载本站的
+			if resHost == hostname {
+				tasks = append(tasks, downloadTask{url: v, resType: "dom", index: k, isHTML: true})
+			}
+		}
+	}
+
+	totalCount = len(tasks)
+	if totalCount == 0 {
+		a.app.Event.Emit("download:complete", map[string]interface{}{
+			"total":   0,
+			"success": 0,
+			"failed":  0,
+		})
+		return true
+	}
+
+	// 并发控制：最多同时下载10个文件
+	maxConcurrent := 10
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// 下载开始时间
+	startTime := time.Now()
+
+	for _, task := range tasks {
+		wg.Add(1)
+		sem <- struct{}{} // 获取信号量
+
+		go func(t downloadTask) {
+			defer wg.Done()
+			defer func() { <-sem }() // 释放信号量
+
+			// 下载文件（使用配置）
+			var filePath string
+
+			if t.isHTML {
+				filePath = File.HTMLDownloadWithOptions(t.url, &options)
+			} else {
+				filePath = File.DownloadWithOptions(t.url, &options)
+			}
+
+			// 更新统计
+			mu.Lock()
+			if filePath != "" {
+				successCount++
+			} else {
+				failedCount++
+				log.Printf("下载失败: %s", t.url)
+			}
+			mu.Unlock()
+
+			// 发送进度事件（兼容旧格式）
+			a.app.Event.Emit("download:"+t.resType, t.index)
+		}(task)
+	}
+
+	// 等待所有下载完成
+	wg.Wait()
+
+	// 计算下载耗时
+	duration := time.Since(startTime)
+
+	// 保存下载记录到数据库
+	if a.store != nil {
+		record := storage.DownloadRecord{
+			SiteName:   hostname,
+			URL:        uri,
+			TotalFiles: totalCount,
+			Downloaded: successCount,
+			Duration:   int64(duration.Seconds()),
+			Status:     "success",
+			StartTime:  startTime,
+			EndTime:    time.Now(),
+		}
+		if err := a.store.AddDownloadRecord(record); err != nil {
+			log.Printf("保存下载记录失败: %v", err)
+		}
+	}
+
+	// 发送完成事件
+	a.app.Event.Emit("download:complete", map[string]interface{}{
+		"total":    totalCount,
+		"success":  successCount,
+		"failed":   failedCount,
+		"duration": duration.Seconds(),
+		"siteName": hostname,
+	})
+
+	log.Printf("下载完成（配置模式=%s）: 总数=%d, 成功=%d, 失败=%d, 耗时=%.2fs",
+		options.Mode, totalCount, successCount, failedCount, duration.Seconds())
+
+	return successCount > 0
 }
 
 // 获取本地已下载网站列表

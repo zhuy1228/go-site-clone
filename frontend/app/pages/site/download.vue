@@ -95,6 +95,105 @@
             </a-button>
           </div>
 
+          <!-- 下载选项配置 -->
+          <div class="download-options-card">
+            <a-card :bordered="false" size="small">
+              <template #title>
+                <span style="font-size: 14px;">
+                  <setting-outlined style="margin-right: 8px;" />
+                  下载选项
+                </span>
+              </template>
+              <a-space direction="vertical" style="width: 100%;" :size="16">
+                <!-- 下载模式选择 -->
+                <div class="option-row">
+                  <div class="option-label">
+                    <span class="label-text">下载模式</span>
+                    <a-tooltip placement="top">
+                      <template #title>
+                        <div style="max-width: 300px;">
+                          <p><b>仅本站资源：</b>只下载同域名的资源，外部CDN资源保持原链接。文件小，下载快，需要网络查看。</p>
+                          <p style="margin-top: 8px;"><b>包含外部资源：</b>下载所有资源包括CDN。文件大，完全离线可用。</p>
+                        </div>
+                      </template>
+                      <question-circle-outlined style="margin-left: 4px; color: #8c8c8c; cursor: help;" />
+                    </a-tooltip>
+                  </div>
+                  <a-radio-group v-model:value="downloadOptions.mode" button-style="solid">
+                    <a-radio-button value="same-domain">
+                      <cloud-outlined />
+                      仅本站资源
+                    </a-radio-button>
+                    <a-radio-button value="all-resources">
+                      <global-outlined />
+                      包含外部资源
+                    </a-radio-button>
+                  </a-radio-group>
+                </div>
+
+                <!-- 外部资源类型选择 -->
+                <div v-if="downloadOptions.mode === 'all-resources'" class="option-row">
+                  <div class="option-label">
+                    <span class="label-text">外部资源类型</span>
+                  </div>
+                  <a-space wrap>
+                    <a-checkbox v-model:checked="downloadOptions.downloadExternalCSS">
+                      <file-text-outlined /> CSS样式
+                    </a-checkbox>
+                    <a-checkbox v-model:checked="downloadOptions.downloadExternalJS">
+                      <code-outlined /> JavaScript
+                    </a-checkbox>
+                    <a-checkbox v-model:checked="downloadOptions.downloadExternalImages">
+                      <file-image-outlined /> 图片
+                    </a-checkbox>
+                    <a-checkbox v-model:checked="downloadOptions.downloadExternalVideos">
+                      <video-camera-outlined /> 视频
+                    </a-checkbox>
+                  </a-space>
+                </div>
+
+                <!-- 文件大小限制 -->
+                <div class="option-row">
+                  <div class="option-label">
+                    <span class="label-text">跳过超大文件</span>
+                    <a-tooltip title="跳过超过指定大小的文件，避免下载时间过长">
+                      <question-circle-outlined style="margin-left: 4px; color: #8c8c8c; cursor: help;" />
+                    </a-tooltip>
+                  </div>
+                  <a-space>
+                    <a-switch v-model:checked="downloadOptions.skipLargeFiles" />
+                    <span v-if="downloadOptions.skipLargeFiles">
+                      最大 
+                      <a-input-number 
+                        v-model:value="downloadOptions.maxFileSize" 
+                        :min="1" 
+                        :max="100" 
+                        size="small"
+                        style="width: 80px;"
+                      /> MB
+                    </span>
+                  </a-space>
+                </div>
+
+                <!-- 提示信息 -->
+                <a-alert 
+                  v-if="downloadOptions.mode === 'all-resources'"
+                  message="注意事项"
+                  type="warning"
+                  show-icon
+                >
+                  <template #description>
+                    <ul style="margin: 4px 0; padding-left: 20px; font-size: 12px;">
+                      <li>下载外部资源会增加文件体积和下载时间</li>
+                      <li>某些CDN资源可能有防盗链或访问限制</li>
+                      <li>建议先使用"仅本站资源"模式测试</li>
+                    </ul>
+                  </template>
+                </a-alert>
+              </a-space>
+            </a-card>
+          </div>
+
           <!-- 资源筛选 -->
           <div class="resource-filter">
             <a-radio-group v-model:value="filterType" size="large" button-style="solid">
@@ -338,6 +437,18 @@ const imageDownloadProgress = ref(0);
 const videoDownloadProgress = ref(0);
 const isDownload = ref(false)
 
+// 下载选项配置
+const downloadOptions = ref({
+  mode: 'same-domain', // 'same-domain' | 'all-resources' | 'custom'
+  customDomains: [],
+  skipLargeFiles: true,
+  maxFileSize: 10, // MB
+  downloadExternalCSS: true,
+  downloadExternalJS: true,
+  downloadExternalImages: true,
+  downloadExternalVideos: false, // 视频通常较大，默认不下载
+})
+
 // 搜索提示
 const searchTips = [
   'https://www.example.com',
@@ -379,8 +490,15 @@ const downloadResource = async () => {
     videoDownloadProgress.value = 0
     
     try {
-      messageApi.info('开始下载网站资源...')
-      await App.DownloadSite(searchKeyword.value.trim(), searchResults.value)
+      const mode = downloadOptions.value.mode
+      const optionsInfo = mode === 'same-domain' 
+        ? '仅下载本站资源' 
+        : '下载所有资源（包含外部CDN）'
+      
+      messageApi.info(`开始下载网站资源...（${optionsInfo}）`)
+      
+      await App.DownloadSiteWithOptions(searchKeyword.value.trim(), searchResults.value, downloadOptions.value)
+      
       messageApi.success('网站资源下载完成！')
       isDownload.value = false
     } catch (error) {
@@ -1018,6 +1136,87 @@ onMounted(() => {
 
 :deep(.download-tips .ant-alert-icon) {
   font-size: 18px;
+}
+
+/* 下载选项卡片 */
+.download-options-card {
+  margin-bottom: 24px;
+}
+
+.download-options-card :deep(.ant-card) {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+}
+
+.download-options-card :deep(.ant-card-head) {
+  border-bottom: 1px solid #e8f4ff;
+  background: linear-gradient(90deg, #e6f7ff 0%, transparent 100%);
+}
+
+.download-options-card :deep(.ant-card-body) {
+  padding: 20px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.option-label {
+  display: flex;
+  align-items: center;
+  min-width: 120px;
+}
+
+.label-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.option-row :deep(.ant-radio-group) {
+  display: flex;
+  gap: 8px;
+}
+
+.option-row :deep(.ant-radio-button-wrapper) {
+  height: 36px;
+  line-height: 34px;
+  padding: 0 20px;
+  border-radius: 6px !important;
+  border: 1px solid #d9d9d9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.option-row :deep(.ant-radio-button-wrapper-checked) {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border-color: #1890ff;
+  color: #fff;
+}
+
+.option-row :deep(.ant-radio-button-wrapper:not(.ant-radio-button-wrapper-checked):hover) {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.option-row :deep(.ant-checkbox-wrapper) {
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.option-row :deep(.ant-checkbox-wrapper:hover) {
+  background: #f0f9ff;
+}
+
+.option-row :deep(.ant-checkbox-wrapper .anticon) {
+  margin-right: 4px;
 }
 
 /* 动画 */

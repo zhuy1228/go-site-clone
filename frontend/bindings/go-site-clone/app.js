@@ -128,6 +128,17 @@ export function DownloadSite(uri, obj) {
 }
 
 /**
+ * DownloadSiteWithOptions 带配置选项的下载网站资源
+ * @param {string} uri
+ * @param {services$0.ResourcesList} obj
+ * @param {types$0.DownloadOptions} options
+ * @returns {$CancellablePromise<boolean>}
+ */
+export function DownloadSiteWithOptions(uri, obj, options) {
+    return $Call.ByID(540154920, uri, obj, options);
+}
+
+/**
  * 启用站点
  * @param {string} siteName
  * @returns {$CancellablePromise<void>}
@@ -167,12 +178,22 @@ export function GetDownloadList() {
 }
 
 /**
+ * GetDownloadOptions 获取下载配置
+ * @returns {$CancellablePromise<types$0.DownloadOptions>}
+ */
+export function GetDownloadOptions() {
+    return $Call.ByID(4070576415).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType8($result);
+    }));
+}
+
+/**
  * GetDownloadStats 获取下载统计
  * @returns {$CancellablePromise<{ [_: string]: any }>}
  */
 export function GetDownloadStats() {
     return $Call.ByID(180408518).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType8($result);
+        return $$createType9($result);
     }));
 }
 
@@ -183,7 +204,7 @@ export function GetDownloadStats() {
  */
 export function GetNginxAccessLog(lines) {
     return $Call.ByID(3967804239, lines).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
+        return $$createType10($result);
     }));
 }
 
@@ -194,7 +215,7 @@ export function GetNginxAccessLog(lines) {
  */
 export function GetNginxErrorLog(lines) {
     return $Call.ByID(3102869025, lines).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
+        return $$createType10($result);
     }));
 }
 
@@ -219,7 +240,7 @@ export function GetRecentDownloadRecords(limit) {
  */
 export function GetResources(rawURL) {
     return $Call.ByID(2167352808, rawURL).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType11($result);
+        return $$createType12($result);
     }));
 }
 
@@ -340,7 +361,8 @@ const $$createType4 = types$0.NginxSiteConfig.createFrom;
 const $$createType5 = $Create.Array($$createType4);
 const $$createType6 = utils$0.FileDir.createFrom;
 const $$createType7 = $Create.Array($$createType6);
-const $$createType8 = $Create.Map($Create.Any, $Create.Any);
-const $$createType9 = $Create.Array($Create.Any);
-const $$createType10 = services$0.ResourcesList.createFrom;
-const $$createType11 = $Create.Nullable($$createType10);
+const $$createType8 = types$0.DownloadOptions.createFrom;
+const $$createType9 = $Create.Map($Create.Any, $Create.Any);
+const $$createType10 = $Create.Array($Create.Any);
+const $$createType11 = services$0.ResourcesList.createFrom;
+const $$createType12 = $Create.Nullable($$createType11);
