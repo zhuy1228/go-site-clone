@@ -46,7 +46,7 @@ func (c *Chrome) Create(accountId string, params *Fingerprint) (*rod.Browser, st
 		Set("disable-features", "WebRtcHideLocalIpsWithMdns").       // 隐藏本地IP
 		Set("webrtc-ip-handling-policy", "disable_non_proxied_udp"). // 禁用非代理UDP
 		Set("force-webrtc-ip-handling-policy").
-		Headless(false) // 关闭无头模式
+		Headless(true) // 关闭无头模式
 
 	// 修改语言
 	l.Set("lang", "en-US")
