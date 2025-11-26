@@ -88,6 +88,27 @@ Section
     
     !insertmacro wails.files
 
+    ; Copy config file
+    File "..\..\..\config.yaml"
+    
+    ; Copy folders
+    SetOutPath $INSTDIR\data
+    File /r /x .gitkeep "..\..\..\data\*.*"
+    
+    SetOutPath $INSTDIR\install
+    File /r "..\..\..\install\*.*"
+    
+    SetOutPath $INSTDIR\plugin
+    File /r "..\..\..\plugin\*.*"
+    
+    SetOutPath $INSTDIR\site-dist
+    File /r /x .gitkeep "..\..\..\site-dist\*.*"
+    
+    SetOutPath $INSTDIR\user-data
+    File /r "..\..\..\user-data\*.*"
+    
+    SetOutPath $INSTDIR
+
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
     CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
 
